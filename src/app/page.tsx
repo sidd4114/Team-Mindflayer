@@ -1,9 +1,8 @@
 'use client';
 
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Sun, Droplets, Wind, Camera, Satellite, AlertTriangle, Volume2, Leaf, Sparkles, MapPin, ChevronRight, Search, Cloud, Eye, Gauge, SlidersHorizontal, Loader2, CloudRain, CloudSnow, CloudDrizzle, CloudFog } from "lucide-react";
+import { Sun, Droplets, Wind, Camera, Satellite, AlertTriangle, Volume2, Leaf, Sparkles, MapPin, ChevronRight, Search, Cloud, Eye, Gauge, SlidersHorizontal, Loader2, CloudRain, CloudSnow, CloudFog } from "lucide-react";
 import { useState, useEffect } from "react";
 import { DiseaseScanner } from "@/components/DiseaseScanner";
 import { useI18n } from "@/contexts/I18nContext";
@@ -38,15 +37,61 @@ export default function Home() {
   const router = useRouter();
   const [showScanner, setShowScanner] = useState(false);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+  const [adviceVisible, setAdviceVisible] = useState(false);
+  const [voiceAvailable, setVoiceAvailable] = useState<boolean | null>(null);
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(true);
   const [weatherError, setWeatherError] = useState<string | null>(null);
   const [currentDate, setCurrentDate] = useState<string>('');
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+
+  // Map app locales to language codes for Speech Synthesis
+  const getLanguageCode = (): string => {
+    const localeMap: Record<string, string> = {
+      en: 'en-US',
+      hi: 'hi-IN',
+      mr: 'mr-IN',
+    };
+    return localeMap[locale] || 'en-US';
+  };
+
+  // Get translated treatment text
+  const getTreatmentText = (): string => {
+    if (!scanResult) return '';
+    if (scanResult.treatment === 'healthy') {
+      return t('results.healthyMsg');
+    }
+    return t(`treatment.${scanResult.treatment}`, scanResult.treatment);
+  };
+
+  // Get the best available voice for the language (prefer natural/premium voices)
+  const getBestVoiceForLanguage = (langCode: string): SpeechSynthesisVoice | null => {
+    const voices = window.speechSynthesis.getVoices();
+    const forLang = voices.filter(v => v.lang.startsWith(langCode.split('-')[0]) || v.lang === langCode);
+    if (forLang.length === 0) return null;
+
+    const prefer = (v: SpeechSynthesisVoice) => {
+      const n = (v.name || '').toLowerCase();
+      let score = 0;
+      // Prefer local (often higher quality)
+      if (v.localService) score += 4;
+      // Prefer known premium/enhanced voices
+      if (n.includes('google') || n.includes('enhanced') || n.includes('premium') || n.includes('neural')) score += 3;
+      if (n.includes('microsoft') || n.includes('samantha') || n.includes('karen') || n.includes('daniel')) score += 2;
+      // Prefer exact lang match (e.g. hi-IN over hi)
+      if (v.lang === langCode) score += 2;
+      if (v.default) score += 1;
+      return score;
+    };
+
+    const sorted = [...forLang].sort((a, b) => prefer(b) - prefer(a));
+    return sorted[0] ?? null;
+  };
 
   const handleScanResult = (result: ScanResult) => {
     setScanResult(result);
     setShowScanner(false);
+    setAdviceVisible(false);
   };
 
   // Helper function to convert disease name to translation key
@@ -59,7 +104,7 @@ export default function Home() {
       .replace('bellpepper', 'bellpepper')
       .replace('potato', 'potato')
       .replace('tomato', 'tomato');
-    
+
     // Capitalize first letter after crop name
     const parts = diseaseName.split(' ');
     if (parts.length > 1) {
@@ -69,17 +114,17 @@ export default function Home() {
       const diseaseKey = crop + diseaseCapitalized.replace(/\s+/g, '');
       return diseaseKey;
     }
-    
+
     return normalized;
   };
 
   // Set current date on client side only to avoid hydration mismatch
   useEffect(() => {
-    setCurrentDate(new Date().toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      day: 'numeric', 
-      month: 'short', 
-      year: 'numeric' 
+    setCurrentDate(new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
     }));
   }, []);
 
@@ -91,7 +136,7 @@ export default function Home() {
       sunriseTime.setHours(6, 30, 0);
       const sunsetTime = new Date(now);
       sunsetTime.setHours(18, 45, 0);
-      
+
       setWeatherData({
         temp: 28,
         feelsLike: 26,
@@ -113,7 +158,7 @@ export default function Home() {
       try {
         // Check if API key is configured
         const API_KEY = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY;
-        
+
         if (!API_KEY || API_KEY === 'demo') {
           console.info('ℹ️ OpenWeatherMap API key not configured. Using demo weather data.');
           setDemoWeatherData();
@@ -130,7 +175,7 @@ export default function Home() {
             return;
           }
           navigator.geolocation.getCurrentPosition(
-            resolve, 
+            resolve,
             reject,
             { timeout: 10000 }
           );
@@ -145,14 +190,14 @@ export default function Home() {
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          
+
           if (response.status === 401) {
             console.error('❌ OpenWeatherMap API: 401 Unauthorized');
             console.error('→ Your API key might not be activated yet (takes 10-15 min)');
             console.error('→ Or the API key is invalid. Check: https://home.openweathermap.org/api_keys');
             throw new Error('API key unauthorized - check if activated');
           }
-          
+
           const errorMessage = errorData.message || `HTTP ${response.status}: ${response.statusText}`;
           throw new Error(errorMessage);
         }
@@ -189,15 +234,15 @@ export default function Home() {
   // Get weather icon component based on icon code
   const getWeatherIcon = (iconCode: string) => {
     if (iconCode.includes('01')) return <Sun className="w-7 h-7 text-white" strokeWidth={2} />;
-    if (iconCode.includes('02') || iconCode.includes('03') || iconCode.includes('04')) 
+    if (iconCode.includes('02') || iconCode.includes('03') || iconCode.includes('04'))
       return <Cloud className="w-7 h-7 text-white" strokeWidth={2} />;
-    if (iconCode.includes('09') || iconCode.includes('10')) 
+    if (iconCode.includes('09') || iconCode.includes('10'))
       return <CloudRain className="w-7 h-7 text-white" strokeWidth={2} />;
-    if (iconCode.includes('11')) 
+    if (iconCode.includes('11'))
       return <AlertTriangle className="w-7 h-7 text-white" strokeWidth={2} />;
-    if (iconCode.includes('13')) 
+    if (iconCode.includes('13'))
       return <CloudSnow className="w-7 h-7 text-white" strokeWidth={2} />;
-    if (iconCode.includes('50')) 
+    if (iconCode.includes('50'))
       return <CloudFog className="w-7 h-7 text-white" strokeWidth={2} />;
     return <Cloud className="w-7 h-7 text-white" strokeWidth={2} />;
   };
@@ -213,26 +258,26 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#F5F3EE]">
-      {/* Clean Olive Green Header - responsive for desktop */}
-      <header className="bg-gradient-to-br from-[#6B7B3F] to-[#5A6A35] px-5 pt-4 pb-24 rounded-b-[36px] md:rounded-b-[48px] md:px-8 md:pt-6 md:pb-28">
-        <div className="max-w-md md:max-w-2xl lg:max-w-3xl mx-auto space-y-4">
+      {/* Clean Olive Green Header */}
+      <header className="bg-gradient-to-br from-[#6B7B3F] to-[#5A6A35] px-5 pt-4 pb-24 rounded-b-[36px]">
+        <div className="max-w-md mx-auto space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <div className="w-11 h-11 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
                 <Leaf className="w-5 h-5 text-white" strokeWidth={2.5} />
               </div>
               <div>
-                <p className="text-white text-base font-semibold">Hello, Farmers</p>
+                <p className="text-white text-base font-semibold">{t("dashboard.greeting", "Hello, Farmers")}</p>
                 <p className="text-white/80 text-xs mt-0.5" suppressHydrationWarning>{currentDate || ''}</p>
               </div>
             </div>
             <LanguageSwitcher />
           </div>
-          
+
           {/* Enhanced Search Bar */}
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-white/70" strokeWidth={2.5} />
-            <input 
+            <input
               type="text"
               placeholder="Search here..."
               className="w-full bg-white/15 backdrop-blur-md border border-white/25 rounded-[18px] pl-12 pr-12 py-3.5 text-white placeholder:text-white/50 text-[15px] font-medium focus:outline-none focus:bg-white/20 focus:border-white/40 transition-all"
@@ -244,9 +289,9 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Main Content Card - responsive width for desktop */}
-      <main className="max-w-md md:max-w-2xl lg:max-w-3xl mx-auto px-5 md:px-8 -mt-20 md:-mt-24 pb-24">
-        <div className="bg-white rounded-3xl shadow-xl shadow-black/5 p-6 md:p-8 space-y-5">
+      {/* Main Content Card */}
+      <main className="max-w-md mx-auto px-5 -mt-20 pb-24">
+        <div className="bg-white rounded-3xl shadow-xl shadow-black/5 p-6 space-y-5">
           {/* Enhanced Weather Card */}
           <div className="bg-gradient-to-br from-blue-50 via-sky-50 to-cyan-50 rounded-2xl p-5 border border-blue-100/50">
             {weatherLoading ? (
@@ -258,8 +303,8 @@ export default function Home() {
                 {weatherError && (
                   <div className="mb-3 px-3 py-2 bg-amber-100 border border-amber-200 rounded-xl">
                     <p className="text-[10px] text-amber-800 font-medium">
-                      {weatherError.includes('API key') 
-                        ? '⚠️ Using demo data. Add API key for live weather.' 
+                      {weatherError.includes('API key')
+                        ? '⚠️ Using demo data. Add API key for live weather.'
                         : '⚠️ Showing demo data. Check connection.'}
                     </p>
                   </div>
@@ -301,7 +346,7 @@ export default function Home() {
                       <Droplets className="w-5 h-5 text-blue-500" strokeWidth={2} />
                     </div>
                     <div className="text-xs font-bold text-slate-900">{weatherData.humidity}%</div>
-                    <div className="text-[10px] text-slate-500">Humidity</div>
+                    <div className="text-[10px] text-slate-500">{t("dashboard.humidity", "Humidity")}</div>
                   </div>
                   <div className="text-center">
                     <div className="w-10 h-10 bg-white/60 backdrop-blur-sm rounded-xl flex items-center justify-center mx-auto mb-1.5">
@@ -361,7 +406,7 @@ export default function Home() {
               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">Quick Actions</h3>
               <span className="text-xs font-medium text-slate-500">2 actions</span>
             </div>
-            
+
             {/* Primary Action - Scan Leaf */}
             <button
               onClick={() => setShowScanner(true)}
@@ -369,7 +414,7 @@ export default function Home() {
             >
               {/* Subtle shine effect */}
               <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
-              
+
               <div className="relative flex items-center gap-4">
                 {/* Icon Container */}
                 <div className="w-14 h-14 rounded-[18px] bg-white/15 backdrop-blur-sm border border-white/20 flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
@@ -385,7 +430,7 @@ export default function Home() {
                       <span className="text-[10px] font-bold text-amber-100">AI</span>
                     </div>
                   </div>
-                  <p className="text-white/75 text-sm font-medium">{t("dashboard.detectDisease", "Detect disease instantly")}</p>
+                  <p className="text-white/75 text-sm font-medium">{t("dashboard.scanLeafDesc", "Detect disease instantly")}</p>
                 </div>
 
                 {/* Arrow */}
@@ -405,7 +450,7 @@ export default function Home() {
                   {/* Content */}
                   <div className="flex-1 text-left">
                     <h4 className="text-lg font-bold text-slate-900 mb-1">{t("dashboard.scanField", "Scan Field")}</h4>
-                    <p className="text-slate-600 text-sm font-medium">{t("dashboard.satellite", "Satellite monitoring")}</p>
+                    <p className="text-slate-600 text-sm font-medium">{t("dashboard.scanFieldDesc", "Satellite monitoring")}</p>
                   </div>
 
                   {/* Arrow */}
@@ -417,47 +462,107 @@ export default function Home() {
 
           {/* Result Card */}
           {scanResult && (
-            <div className="border-2 border-red-200 bg-red-50 rounded-3xl overflow-hidden">
-              <div className="bg-gradient-to-r from-red-500 to-rose-600 p-4">
+            <div className="border-2 border-slate-200 bg-white rounded-3xl overflow-hidden shadow-sm">
+              <div className="bg-gradient-to-r from-[#6B7B3F] to-[#5A6A35] p-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                    <AlertTriangle className="w-5 h-5 text-white" strokeWidth={2.5} />
+                    <Leaf className="w-5 h-5 text-white" strokeWidth={2.5} />
                   </div>
                   <div>
                     <h3 className="text-white font-bold text-base">{t('results.disease', 'Disease Detected')}</h3>
                   </div>
                 </div>
               </div>
-              
+
               <div className="p-4 space-y-3">
-                <div className="bg-white border border-red-200 rounded-2xl p-3">
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3">
                   <div className="flex items-center gap-2 mb-1.5">
-                    <Leaf className="w-4 h-4 text-red-600" strokeWidth={2.5} />
+                    <Leaf className="w-4 h-4 text-[#6B7B3F]" strokeWidth={2.5} />
                     <h4 className="font-bold text-slate-900 text-sm">
                       {t(`diseases.${getDiseaseTranslationKey(scanResult.disease)}`, scanResult.disease)}
                     </h4>
                   </div>
-                  <p className="text-xs text-slate-700 leading-relaxed">
-                    {scanResult.disease === "Early Blight" && 
-                      "Common tomato disease caused by fungus. Appears as dark spots on older leaves."}
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    {scanResult.treatment === 'healthy'
+                      ? t('results.healthyMsg', 'Continue monitoring for best results')
+                      : t(`treatment.${scanResult.treatment}`, scanResult.treatment)}
                   </p>
                 </div>
 
-                <button 
-                  onClick={() => router.push('/coming-soon')}
-                  className="w-full bg-amber-500 text-white rounded-2xl p-3 font-bold text-sm flex items-center justify-center gap-2 hover:bg-amber-600 transition-all active:scale-[0.98]"
-                >
-                  <Volume2 className="w-4 h-4" strokeWidth={2.5} />
-                  <span>{t('results.playTreatmentAdvice', 'Play Treatment Advice')}</span>
-                </button>
+                <div>
+                  <button
+                    onClick={() => {
+                      if (!scanResult) return;
+                      setAdviceVisible(true);
+                      const treatmentText = getTreatmentText();
+                      try {
+                        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+                          window.speechSynthesis.cancel();
+                          const utter = new SpeechSynthesisUtterance(treatmentText);
 
-                <div className="grid grid-cols-2 gap-2">
-                  <button className="border-2 border-slate-300 bg-white text-slate-700 rounded-2xl p-3 font-bold text-sm hover:bg-slate-50 transition-all active:scale-[0.98]">
-                    {t('results.save', 'Save')}
+                          const langCode = getLanguageCode();
+                          utter.lang = langCode;
+
+                          // Adjust speech rate for better clarity, especially for Marathi
+                          if (locale === 'mr') {
+                            utter.rate = 0.7; // Slower for Marathi clarity
+                          } else if (locale === 'hi') {
+                            utter.rate = 0.85; // Slightly slower for Hindi
+                          } else {
+                            utter.rate = 1.0; // Normal for English
+                          }
+
+                          utter.pitch = 1.0;
+                          utter.volume = 1.0;
+
+                          const applyBestVoiceAndSpeak = () => {
+                            const voice = getBestVoiceForLanguage(langCode);
+                            if (voice) {
+                              utter.voice = voice;
+                              setVoiceAvailable(true);
+                            } else {
+                              setVoiceAvailable(false);
+                            }
+                            window.speechSynthesis.speak(utter);
+                          };
+
+                          // Ensure voices are loaded before speaking
+                          if (window.speechSynthesis.getVoices().length === 0) {
+                            window.speechSynthesis.onvoiceschanged = () => applyBestVoiceAndSpeak();
+                          } else {
+                            applyBestVoiceAndSpeak();
+                          }
+                        }
+                      } catch (err) {
+                        console.error('Failed to play speech:', err);
+                      }
+                    }}
+                    className="w-full bg-amber-500 text-white rounded-2xl p-3 font-bold text-sm flex items-center justify-center gap-2 hover:bg-amber-600 transition-all active:scale-[0.98]"
+                  >
+                    <Volume2 className="w-4 h-4" strokeWidth={2.5} />
+                    <span>{t('results.playTreatmentAdvice', 'Play Treatment Advice')}</span>
                   </button>
-                  <button 
+
+                  {adviceVisible && scanResult && (
+                    <div className="mt-3 space-y-2">
+                      {voiceAvailable === false && locale !== 'en' && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-xs text-amber-800">
+                          <p className="font-semibold mb-1">⚠️ Voice not available</p>
+                          <p>Your device may not have a {locale === 'mr' ? 'Marathi' : 'Hindi'} voice. Reading in English instead.</p>
+                        </div>
+                      )}
+                      <div className="bg-white border border-slate-200 rounded-2xl p-3 text-sm text-slate-800">
+                        <h5 className="font-semibold mb-1">{t('results.treatmentAdvice', 'Treatment Advice')}</h5>
+                        <p className="leading-relaxed">{getTreatmentText()}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="w-full">
+                  <button
                     onClick={() => setShowScanner(true)}
-                    className="bg-[#6B7B3F] text-white rounded-2xl p-3 font-bold text-sm flex items-center justify-center gap-2 hover:bg-[#5A6A35] transition-all active:scale-[0.98]"
+                    className="w-full bg-[#6B7B3F] text-white rounded-2xl p-3 font-bold text-sm flex items-center justify-center gap-2 hover:bg-[#5A6A35] transition-all active:scale-[0.98]"
                   >
                     <Camera className="w-4 h-4" strokeWidth={2.5} />
                     <span>{t('results.scanAgain', 'Scan Again')}</span>

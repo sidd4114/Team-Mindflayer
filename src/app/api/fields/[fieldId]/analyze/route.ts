@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getNDVITimeSeries } from "@/lib/sentinel/statistics";
-import { detectNDVIAnomalies } from "@/lib/anomaly";
+import { detectNDVIAnomalies, detectStatisticalAnomalies } from "@/lib/anomaly";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 
@@ -73,6 +73,21 @@ export async function POST(
                 detected_at: new Date().toISOString()
             }));
             await supabase.from("alerts").insert(alertRows);
+        }
+
+        // 5b. Statistical anomaly notification (2σ rule)
+        if (timeSeries.length >= 3) {
+            const stats = detectStatisticalAnomalies(timeSeries, 30);
+            if (stats.isAnomaly) {
+                await supabase.from("notifications").insert({
+                    user_id: user.id,
+                    field_id: fieldId,
+                    type: "statistical_anomaly",
+                    title: "Sudden health drop detected",
+                    body: stats.message,
+                    severity: "high",
+                });
+            }
         }
 
         // 6. Revalidate pages

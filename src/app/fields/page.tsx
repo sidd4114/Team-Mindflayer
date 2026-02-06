@@ -27,5 +27,7 @@ export default async function FieldsPage() {
         (user.email ? user.email.split("@")[0] : null) ||
         "Farmer";
 
-    return <FieldsPageContent fields={fields ?? []} userName={userName} />;
+    return (
+        <FieldsPageContent fields={fields ?? []} userName={userName} />
+    );
 }

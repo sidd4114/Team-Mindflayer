@@ -24,73 +24,73 @@ const DISEASE_LABELS = [
 const DISEASE_INFO: Record<string, {
   displayName: string;
   severity: 'low' | 'medium' | 'high';
-  treatment: string;
+  treatmentKey: string;
   description: string;
 }> = {
   bellpepper_anthracnose: {
     displayName: 'Bell Pepper Anthracnose',
     severity: 'high',
-    treatment: 'Apply copper-based fungicides. Remove infected fruits. Improve air circulation.',
+    treatmentKey: 'anthracnose',
     description: 'Fungal disease causing dark, sunken lesions on peppers.',
   },
   bellpepper_bacterial_spot: {
     displayName: 'Bell Pepper Bacterial Spot',
     severity: 'high',
-    treatment: 'Use copper-based bactericides. Remove infected plants. Practice crop rotation.',
+    treatmentKey: 'bacterialspot',
     description: 'Bacterial infection causing dark spots on leaves and fruits.',
   },
   bellpepper_healthy: {
     displayName: 'Healthy Bell Pepper',
     severity: 'low',
-    treatment: 'No treatment needed. Continue regular care and monitoring.',
+    treatmentKey: 'healthy',
     description: 'Plant shows no signs of disease. Maintain good practices.',
   },
   potato_early_blight: {
     displayName: 'Potato Early Blight',
     severity: 'high',
-    treatment: 'Apply fungicides. Remove infected leaves. Ensure proper spacing for airflow.',
+    treatmentKey: 'earlyblight',
     description: 'Fungal disease causing brown spots with concentric rings on leaves.',
   },
   potato_healthy: {
     displayName: 'Healthy Potato',
     severity: 'low',
-    treatment: 'No treatment needed. Continue regular care and monitoring.',
+    treatmentKey: 'healthy',
     description: 'Plant shows no signs of disease. Maintain good practices.',
   },
   potato_late_blight: {
     displayName: 'Potato Late Blight',
     severity: 'high',
-    treatment: 'Apply systemic fungicides immediately. Remove all infected plants. Destroy crop residues.',
+    treatmentKey: 'lateblight',
     description: 'Severe fungal disease that can destroy entire crops quickly.',
   },
   tomato_bacterial_spot: {
     displayName: 'Tomato Bacterial Spot',
     severity: 'high',
-    treatment: 'Use copper-based bactericides. Remove infected plants. Avoid overhead watering.',
+    treatmentKey: 'bacterialspot',
     description: 'Bacterial infection causing dark spots on leaves, stems, and fruits.',
   },
   tomato_early_blight: {
     displayName: 'Tomato Early Blight',
     severity: 'high',
-    treatment: 'Apply fungicides. Remove lower infected leaves. Mulch around plants.',
+    treatmentKey: 'earlyblight',
     description: 'Fungal disease causing brown spots with target-like patterns.',
   },
   tomato_healthy: {
     displayName: 'Healthy Tomato',
     severity: 'low',
-    treatment: 'No treatment needed. Continue regular care and monitoring.',
+    treatmentKey: 'healthy',
     description: 'Plant shows no signs of disease. Maintain good practices.',
   },
   tomato_late_blight: {
     displayName: 'Tomato Late Blight',
     severity: 'high',
-    treatment: 'Apply systemic fungicides immediately. Remove infected plants. Improve drainage.',
+    treatmentKey: 'lateblight',
     description: 'Severe fungal disease that spreads rapidly in humid conditions.',
   },
   tomato_leaf_mold: {
     displayName: 'Tomato Leaf Mold',
     severity: 'medium',
-    treatment: 'Improve ventilation. Apply fungicides. Remove infected leaves.',
+    treatmentKey: 'leafmold',
     description: 'Fungal disease causing yellow spots on upper leaf surfaces.',
   },
 };
@@ -129,7 +129,7 @@ class OfflineClassifier {
         await tf.ready();
         console.log('✅ TensorFlow.js CPU backend initialized');
       } catch (cpuError) {
-        throw new Error('Failed to initialize TensorFlow.js: ' + cpuError);
+        throw new Error('Failed to initialize TensorFlow.js: ' + (cpuError instanceof Error ? cpuError.message : String(cpuError)));
       }
     }
   }
@@ -178,9 +178,9 @@ class OfflineClassifier {
           message: error instanceof Error ? error.message : 'Unknown error',
           stack: error instanceof Error ? error.stack : undefined,
         });
-        
+
         this.modelLoading = null;
-        
+
         // Provide more helpful error message
         if (error instanceof Error) {
           if (error.message.includes('not found') || error.message.includes('404')) {
@@ -191,7 +191,7 @@ class OfflineClassifier {
             throw new Error(`Failed to load model: ${error.message}`);
           }
         }
-        
+
         throw new Error('Failed to load classification model. Please try again later.');
       }
     })();
@@ -272,6 +272,10 @@ class OfflineClassifier {
       const diseaseKey = topPrediction.label;
       const diseaseInfo = DISEASE_INFO[diseaseKey];
 
+      if (!diseaseInfo) {
+        throw new Error(`Unknown disease key: ${diseaseKey}`);
+      }
+
       console.log('✅ Classification complete:', topPrediction);
       console.log('📊 Top 3 predictions:', allPredictions.slice(0, 3));
 
@@ -280,7 +284,7 @@ class OfflineClassifier {
         displayName: diseaseInfo.displayName,
         confidence: topPrediction.confidence,
         severity: diseaseInfo.severity,
-        treatment: diseaseInfo.treatment,
+        treatment: diseaseInfo.treatmentKey,
         description: diseaseInfo.description,
         allPredictions,
       };
@@ -297,10 +301,10 @@ class OfflineClassifier {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
-      
+
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error('Failed to load image'));
-      
+
       img.src = url;
     });
   }
@@ -340,7 +344,12 @@ class OfflineClassifier {
     if (!info) {
       throw new Error(`Unknown disease: ${diseaseKey}`);
     }
-    return info;
+    return {
+      displayName: info.displayName,
+      severity: info.severity,
+      treatment: info.treatmentKey,
+      description: info.description,
+    };
   }
 
   /**
@@ -362,9 +371,9 @@ export default classifierInstance;
 
 // Export utility functions
 export const loadModel = () => classifierInstance.loadModel();
-export const classifyImage = (imageSource: string | HTMLImageElement | HTMLVideoElement) => 
+export const classifyImage = (imageSource: string | HTMLImageElement | HTMLVideoElement) =>
   classifierInstance.classifyImage(imageSource);
-export const classifyFromWebcam = (videoElement: HTMLVideoElement) => 
+export const classifyFromWebcam = (videoElement: HTMLVideoElement) =>
   classifierInstance.classifyFromWebcam(videoElement);
 export const getDiseaseInfo = (diseaseKey: string) => classifierInstance.getDiseaseInfo(diseaseKey);
 export const getMemoryInfo = () => classifierInstance.getMemoryInfo();

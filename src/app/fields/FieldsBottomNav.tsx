@@ -3,18 +3,19 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useI18n } from "@/contexts/I18nContext";
-import { Home, LayoutGrid, Settings } from "lucide-react";
+import { Home, LayoutGrid, ShoppingBag, Settings } from "lucide-react";
 
 /**
- * Bottom navigation: Home, Fields, Settings.
- * Used on landing, Fields, Settings, and Field Details. Same look everywhere.
+ * Bottom navigation: Home, Fields, Shop, Settings.
+ * Used on landing, Fields, Shop, Settings, and Field Details. Same look everywhere.
  */
 export function FieldsBottomNav() {
     const pathname = usePathname();
     const { t } = useI18n();
     const isFields = pathname.startsWith("/fields") && pathname !== "/fields/new";
+    const isShop = pathname.startsWith("/shop");
 
-    const linkBase = "flex flex-col items-center justify-center gap-1 min-w-[72px] min-h-[44px] rounded-xl active:opacity-70 transition-all";
+    const linkBase = "flex flex-col items-center justify-center gap-1 min-w-[64px] md:min-w-[72px] min-h-[44px] rounded-xl active:opacity-70 transition-all";
     const linkActive = "text-[#6B7B3F] bg-[#6B7B3F]/10";
     const linkInactive = "text-slate-500 hover:bg-slate-50";
 
@@ -25,7 +26,7 @@ export function FieldsBottomNav() {
             role="navigation"
             aria-label="Main navigation"
         >
-            <div className="flex items-center justify-around px-2 py-2.5 md:px-6">
+            <div className="flex items-center justify-around px-1 py-2.5 md:px-6">
                 <Link
                     href="/"
                     className={`${linkBase} ${pathname === "/" ? linkActive : linkInactive}`}
@@ -41,6 +42,14 @@ export function FieldsBottomNav() {
                 >
                     <LayoutGrid className="w-5 h-5 shrink-0" strokeWidth={2.5} />
                     <span className="text-[10px] font-medium">{t("fields.myFields", "Fields")}</span>
+                </Link>
+                <Link
+                    href="/shop"
+                    className={`${linkBase} ${isShop ? linkActive : linkInactive}`}
+                    aria-current={isShop ? "page" : undefined}
+                >
+                    <ShoppingBag className="w-5 h-5 shrink-0" strokeWidth={2.5} />
+                    <span className="text-[10px] font-medium">{t("navigation.shop", "Shop")}</span>
                 </Link>
                 <Link
                     href="/settings"

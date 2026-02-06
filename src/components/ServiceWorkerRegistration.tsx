@@ -14,6 +14,15 @@ export function ServiceWorkerRegistration() {
       return;
     }
 
+    // In development: unregister any existing SW so it can't intercept chunks and cause ChunkLoadError.
+    if (process.env.NODE_ENV === 'development') {
+      navigator.serviceWorker?.getRegistrations?.().then((regs) => {
+        regs.forEach((r) => r.unregister());
+        if (regs.length) console.log('[SW] Unregistered in development');
+      });
+      return;
+    }
+
     // Wait for page to load before registering
     if (document.readyState === 'complete') {
       registerSW();

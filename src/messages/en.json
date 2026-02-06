@@ -7,10 +7,12 @@
   "navigation": {
     "home": "Home",
     "history": "History",
+    "shop": "Shop",
     "settings": "Settings"
   },
   "dashboard": {
     "title": "FarmScan",
+    "greeting": "Hello, Farmers",
     "subtitle": "Precision Agriculture at Your Fingertips",
     "currentStatus": "Current Field Status",
     "healthScore": "Field Health Score",
@@ -57,7 +59,8 @@
     "healthy": "Your crop appears healthy!",
     "healthyMsg": "Continue monitoring for best results",
     "save": "Save",
-    "playTreatmentAdvice": "Play Treatment Advice"
+    "playTreatmentAdvice": "Play Treatment Advice",
+    "treatmentAdvice": "Treatment Advice"
   },
   "diseases": {
     "potatoEarlyBlight": "Potato Early Blight",
@@ -73,10 +76,14 @@
     "bellpepperHealthy": "Healthy Bell Pepper"
   },
   "treatment": {
-    "earlyblight": "Early Blight • Common fungal disease caused by fungus. Appears as dark spots on older leaves.",
-    "powderymildew": "Powdery Mildew • White fungal coating on leaves and stems.",
-    "lateblight": "Late Blight • Serious fungal disease causing rapid crop failure.",
-    "leafspot": "Leaf Spot • Various fungal diseases affecting leaf tissue."
+    "earlyblight": "Early Blight • Common fungal disease caused by fungus. Appears as dark spots on older leaves. Apply copper-based fungicides. Remove infected fruits. Improve air circulation.",
+    "powderymildew": "Powdery Mildew • White fungal coating on leaves and stems. Apply copper-based fungicides. Remove infected leaves. Ensure proper spacing for airflow.",
+    "lateblight": "Late Blight • Serious fungal disease causing rapid crop failure. Apply systemic fungicides immediately. Remove all infected plants. Destroy crop residues.",
+    "leafspot": "Leaf Spot • Various fungal diseases affecting leaf tissue. Apply fungicides. Remove lower infected leaves. Mulch around plants.",
+    "leafmold": "Leaf Mold • Fungal disease causing yellow spots on upper leaf surfaces. Improve ventilation. Apply fungicides. Remove infected leaves.",
+    "anthracnose": "Anthracnose • Fungal disease causing dark, sunken lesions. Apply copper-based fungicides. Remove infected fruits. Improve air circulation.",
+    "bacterialspot": "Bacterial Spot • Bacterial infection causing dark spots. Use copper-based bactericides. Remove infected plants. Practice crop rotation.",
+    "healthy": "Healthy • No treatment needed. Continue regular care and monitoring."
   },
   "sateliteAnalysis": {
     "title": "Field Analysis",
@@ -86,6 +93,23 @@
     "irrigationNeeds": "Irrigation Needs",
     "viewReport": "View Report",
     "getAdvice": "Get Advice"
+  },
+  "shop": {
+    "title": "Market Intelligence",
+    "subtitle": "Smart selling insights for farmers",
+    "selectCrop": "Select crop",
+    "price": "Price",
+    "priceTrends": "Real-time price trends",
+    "priceTrendsDesc": "Based on regional crop health. See how prices move in your area.",
+    "sellTiming": "Sell timing alerts",
+    "sellTimingDesc": "Get alerted when it's a good time to sell, so you don't miss opportunities.",
+    "pricePrediction": "Price predictions",
+    "pricePredictionDesc": "Predict price changes using disease outbreak and crop health data.",
+    "noData": "No price data for this crop yet.",
+    "noAlerts": "No sell timing alerts right now. Add fields and run analysis to get personalised alerts.",
+    "noPredictions": "No predictions for this crop yet.",
+    "confidence": "confidence",
+    "comingSoon": "Market Intelligence features are coming soon."
   },
   "fields": {
     "myFields": "My Fields",

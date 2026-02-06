@@ -83,6 +83,19 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Don't intercept Next.js / dev server requests – let the browser handle them.
+  // These paths are served by the dev server or build output; SW fetch often fails and breaks loading.
+  const pathname = url.pathname;
+  if (
+    pathname.startsWith('/_next/') ||
+    pathname.includes('[turbopack]') ||
+    pathname.includes('node_modules') ||
+    pathname.startsWith('/_nextjs_') ||
+    pathname.includes('original-stack-frames')
+  ) {
+    return;
+  }
+
   // Handle model files with cache-first strategy
   if (url.pathname.startsWith('/models/')) {
     event.respondWith(

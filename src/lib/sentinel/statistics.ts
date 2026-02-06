@@ -61,6 +61,13 @@ export async function getNDVITimeSeries(args: {
     const token = await getSentinelToken();
     const aggregationPeriod = args.intervalDays ? `P${args.intervalDays}D` : "P1D";
 
+    // Sentinel Hub requires from <= to; swap if reversed (e.g. future planting date)
+    let from = args.from;
+    let to = args.to;
+    if (new Date(from).getTime() > new Date(to).getTime()) {
+        [from, to] = [to, from];
+    }
+
     const body = {
         input: {
             bounds: {
@@ -78,8 +85,8 @@ export async function getNDVITimeSeries(args: {
         },
         aggregation: {
             timeRange: {
-                from: args.from,
-                to: args.to
+                from,
+                to
             },
             aggregationInterval: {
                 of: aggregationPeriod,
