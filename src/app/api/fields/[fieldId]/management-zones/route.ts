@@ -147,6 +147,12 @@ export async function POST(
         // Use latest NDVI mean
         const latestNDVI = timeSeries[timeSeries.length - 1].mean;
 
+        // Clean slate: Delete ALL existing management zones for this field
+        await supabase
+            .from("management_zones")
+            .delete()
+            .eq("field_id", fieldId);
+
         // Generate zones
         const zones = await generateManagementZones(fieldId, latestNDVI, threshold);
 

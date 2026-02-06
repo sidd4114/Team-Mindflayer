@@ -114,10 +114,16 @@ export async function generateManagementZones(
     const outerRing: number[][] = field.geometry.coordinates[0];
     const bbox = getBBox(outerRing);
     
+    console.log(`[GenerateZones] FieldId: ${fieldId}`);
+    console.log(`[GenerateZones] OuterRing points: ${outerRing.length}`);
+    console.log(`[GenerateZones] BBox:`, bbox);
+    
     // Split the field into 3 horizontal bands (bottom, middle, top)
     const latRange = bbox.maxY - bbox.minY;
     const bandHeight = latRange / 3;
     
+    console.log(`[GenerateZones] LatRange: ${latRange}, BandHeight: ${bandHeight}`);
+
     const bands = [
         { minY: bbox.minY, maxY: bbox.minY + bandHeight },                    // bottom third
         { minY: bbox.minY + bandHeight, maxY: bbox.minY + 2 * bandHeight },  // middle third  
@@ -138,16 +144,43 @@ export async function generateManagementZones(
         const band = bands[i];
         const config = zoneConfig[i];
 
+        console.log(`[GenerateZones] Processing Band ${i}: Y [${band.minY} - ${band.maxY}]`);
+
         // Clip the field polygon to this band
         const clipped = clipRingToHorizontalBand(outerRing, band.minY, band.maxY);
         
-        if (clipped.length < 3) continue; // Skip degenerate polygons
+        console.log(`[GenerateZones] Band ${i} clipped points: ${clipped.length}`);
+
+        // Filter collinear/duplicate points to prevent degenerate polygons
+        const cleaned = clipped.filter((p, i) => {
+            if (i === 0) return true;
+            const prev = clipped[i-1];
+            return Math.abs(p[0] - prev[0]) > 1e-9 || Math.abs(p[1] - prev[1]) > 1e-9;
+        });
+
+        if (cleaned.length < 3) {
+            console.log(`[GenerateZones] Band ${i} skipped (degenerate/too few points)`);
+            continue; 
+        }
 
         // Close the ring
-        const closedRing = [...clipped];
-        if (closedRing[0][0] !== closedRing[closedRing.length - 1][0] ||
-            closedRing[0][1] !== closedRing[closedRing.length - 1][1]) {
+        const closedRing = [...cleaned];
+        if (Math.abs(closedRing[0][0] - closedRing[closedRing.length - 1][0]) > 1e-9 ||
+            Math.abs(closedRing[0][1] - closedRing[closedRing.length - 1][1]) > 1e-9) {
             closedRing.push([...closedRing[0]]);
+        }
+        
+        // Final check on points count
+        if (closedRing.length < 4) { // 3 points + closure = 4
+             console.log(`[GenerateZones] Band ${i} skipped (not enough points to form polygon)`);
+             continue;
+        }
+
+        // Validate points
+        const validPoints = closedRing.every(p => !isNaN(p[0]) && !isNaN(p[1]) && isFinite(p[0]) && isFinite(p[1]));
+        if (!validPoints) {
+            console.error(`[GenerateZones] Band ${i} has invalid points (NaN/Infinity). Skipping.`);
+            continue;
         }
 
         const avgNdvi = Math.max(0.05, Math.min(0.95, ndviMean + config.ndviOffset));
@@ -155,13 +188,17 @@ export async function generateManagementZones(
         // Calculate fertilizer recommendations based on zone type
         const recs = getRecommendations(config.type, avgNdvi);
 
+        // Debug geometry structure before pushing
+        const geometry = {
+            type: "Polygon" as const,
+            coordinates: [closedRing]
+        };
+        // console.log(`[GenerateZones] Band ${i} geometry coords length:`, geometry.coordinates[0].length);
+
         zones.push({
             zone_number: config.number,
             zone_type: config.type,
-            geometry: {
-                type: "Polygon",
-                coordinates: [closedRing]
-            },
+            geometry: geometry,
             avg_ndvi: parseFloat(avgNdvi.toFixed(3)),
             recommendation_n: recs.n,
             recommendation_p: recs.p,
@@ -170,6 +207,7 @@ export async function generateManagementZones(
         });
     }
 
+    console.log(`[GenerateZones] Generated ${zones.length} zones`);
     return zones;
 }
 
@@ -183,6 +221,15 @@ function getRecommendations(zoneType: "low" | "medium" | "high", _avgNdvi?: numb
         case "high":
             return { n: 80, p: 30, k: 40 };
     }
+}
+
+
+function polygonToWKT(coordinates: number[][][]): string {
+    if (!coordinates || coordinates.length === 0) return 'POLYGON EMPTY';
+    const rings = coordinates.map(ring => {
+        return `(${ring.map(p => `${p[0]} ${p[1]}`).join(', ')})`;
+    }).join(', ');
+    return `POLYGON(${rings})`;
 }
 
 /**
@@ -203,24 +250,44 @@ export async function storeManagementZones(
         .eq("analysis_date", analysisDate);
 
     // Insert new zones
+    // Note: We deliberately allow Supabase to handle the geometry.
+    // However, if we suspect JSON parsing issues, we could try passing stringified GeoJSON or simplified casts.
+    // For now, let's keep it standard but add logging.
+    
+    // We will use the object format which works with standard PostGIS setup in Supabase.
+    // To ensure coordinate precision doesn't cause issues, we formatted them in generation.
+
     const rows = zones.map(zone => ({
         field_id: fieldId,
         zone_number: zone.zone_number,
         zone_type: zone.zone_type,
-        geometry: zone.geometry,
+        // Ensure geometry is a plain object and valid
+        geometry: zone.geometry, 
         avg_ndvi: zone.avg_ndvi,
         recommendation_n: zone.recommendation_n,
         recommendation_p: zone.recommendation_p,
         recommendation_k: zone.recommendation_k,
         analysis_date: analysisDate
     }));
+    
+    // Console log the first row geometry to debug
+    if (rows.length > 0) {
+       console.log("[StoreZones] Sample Geometry (Zone 0):", JSON.stringify(rows[0].geometry));
+       const coordCheck = (rows[0].geometry as any).coordinates;
+       if (!coordCheck || coordCheck.length === 0 || (coordCheck[0] && coordCheck[0].length === 0)) {
+           console.error("[StoreZones] CRITICAL: Attempting to store empty geometry!");
+       }
+    }
 
     const { error } = await supabase
         .from("management_zones")
         .insert(rows);
-
+    
     if (error) {
+        console.error("[StoreZones] Insert error:", error);
         throw new Error(`Failed to store management zones: ${error.message}`);
+    } else {
+        console.log(`[StoreZones] Successfully stored ${rows.length} zones`);
     }
 }
 
