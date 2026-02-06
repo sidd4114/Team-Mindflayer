@@ -1,0 +1,340 @@
+@import "tailwindcss";
+
+@theme {
+  /* Modern agricultural palette */
+  --color-primary: #10b981;        /* Fresh emerald green */
+  --color-primary-light: #d1fae5;  /* Light mint */
+  --color-primary-dark: #059669;   /* Rich emerald */
+  
+  --color-secondary: #f59e0b;      /* Warm amber */
+  --color-secondary-light: #fef3c7; /* Light amber */
+  
+  --color-success: #10b981;        /* Success green */
+  --color-warning: #f59e0b;        /* Warning amber */
+  --color-danger: #ef4444;         /* Danger red */
+  --color-info: #3b82f6;           /* Info blue */
+  
+  --color-background: #ffffff;     /* Pure white */
+  --color-surface: #fafafa;        /* Off-white */
+  --color-text-primary: #0f172a;   /* Slate 900 */
+  --color-text-secondary: #475569; /* Slate 600 */
+  --color-text-muted: #94a3b8;     /* Slate 400 */
+  
+  --color-border: #e2e8f0;         /* Slate 200 */
+  --color-border-strong: #cbd5e1;  /* Slate 300 */
+
+  --font-inter: var(--font-inter), ui-sans-serif, system-ui;
+  --font-devanagari: var(--font-devanagari), sans-serif;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+  }
+}
+
+@layer base {
+  /* Global typography */
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply font-sans;
+    background-color: #F5F3EE;
+    color: var(--color-text-primary);
+    font-size: 15px;
+    line-height: 1.5;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: rgba(107, 123, 63, 0.1);
+  }
+
+  /* Font family utilities */
+  .font-sans {
+    font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  .font-devanagari {
+    font-family: var(--font-devanagari), 'Noto Sans Devanagari', sans-serif;
+  }
+
+  /* Heading styles - larger and bolder for outdoor use */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold tracking-tight;
+    color: var(--color-text-primary);
+  }
+
+  h1 {
+    @apply text-3xl md:text-4xl;
+    line-height: 1.2;
+  }
+
+  h2 {
+    @apply text-2xl md:text-3xl;
+    line-height: 1.3;
+  }
+
+  h3 {
+    @apply text-xl md:text-2xl;
+    line-height: 1.4;
+  }
+
+  /* Links */
+  a {
+    @apply transition-colors duration-200;
+  }
+
+  /* Button reset - Larger touch targets for farmers */
+  button {
+    @apply transition-colors duration-150;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(16, 185, 129, 0.2);
+  }
+  
+  /* Ensure minimum touch target size (44x44px) */
+  button, a {
+    min-height: 44px;
+  }
+
+  /* Focus states for accessibility - high contrast */
+  button:focus-visible,
+  a:focus-visible {
+    @apply outline-none ring-4 ring-offset-2;
+    ring-color: var(--color-primary);
+  }
+}
+
+@layer components {
+  /* Primary button - Bold, high-contrast for outdoor use */
+  .btn-primary {
+    @apply px-6 py-3 text-white font-bold rounded-xl transition-all min-h-[52px] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed;
+    background-color: var(--color-primary);
+    border: 2px solid var(--color-primary-dark);
+    font-size: 16px;
+    font-weight: 700;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  .btn-primary:hover:not(:disabled) {
+    background-color: var(--color-primary-dark);
+  }
+  
+  .btn-primary:active:not(:disabled) {
+    transform: scale(0.98);
+    box-shadow: none;
+  }
+
+  /* Secondary button - Earth tone for less critical actions */
+  .btn-secondary {
+    @apply px-6 py-3 text-white font-bold rounded-xl transition-all min-h-[52px] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed;
+    background-color: var(--color-secondary);
+    border: 2px solid #78350f;
+    font-size: 16px;
+    font-weight: 700;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  .btn-secondary:hover:not(:disabled) {
+    background-color: #78350f;
+  }
+  
+  .btn-secondary:active:not(:disabled) {
+    transform: scale(0.98);
+    box-shadow: none;
+  }
+
+  /* Outline button - Clean alternative action */
+  .btn-outline {
+    @apply px-6 py-3 font-bold rounded-xl transition-all min-h-[52px] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed;
+    background-color: white;
+    border: 2px solid var(--color-primary);
+    color: var(--color-primary-dark);
+    font-size: 16px;
+    font-weight: 700;
+  }
+  
+  .btn-outline:hover:not(:disabled) {
+    background-color: var(--color-primary-light);
+  }
+  
+  .btn-outline:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  /* Card component - Clean, minimal, high contrast */
+  .card {
+    @apply bg-white rounded-2xl transition-colors;
+    border: 2px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .card-lg {
+    @apply bg-white rounded-2xl transition-colors;
+    border: 2px solid var(--color-border);
+    box-shadow: var(--shadow-md);
+  }
+  
+  .card-interactive {
+    @apply bg-white rounded-2xl transition-all cursor-pointer;
+    border: 2px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .card-interactive:hover {
+    border-color: var(--color-border-strong);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+  }
+  
+  .card-interactive:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* Badge component - High contrast, larger text */
+  .badge-success {
+    @apply inline-flex items-center gap-1 px-3 py-1.5 rounded-full font-bold;
+    background-color: #dcfce7;
+    color: #15803d;
+    border: 2px solid #86efac;
+    font-size: 15px;
+  }
+
+  .badge-warning {
+    @apply inline-flex items-center gap-1 px-3 py-1.5 rounded-full font-bold;
+    background-color: #fef9c3;
+    color: #a16207;
+    border: 2px solid #fde047;
+    font-size: 15px;
+  }
+
+  .badge-danger {
+    @apply inline-flex items-center gap-1 px-3 py-1.5 rounded-full font-bold;
+    background-color: #fee2e2;
+    color: #b91c1c;
+    border: 2px solid #fca5a5;
+    font-size: 15px;
+  }
+  
+  .badge-info {
+    @apply inline-flex items-center gap-1 px-3 py-1.5 rounded-full font-bold;
+    background-color: #dbeafe;
+    color: #1e40af;
+    border: 2px solid #93c5fd;
+    font-size: 15px;
+  }
+
+  /* Input field - Large, high contrast for outdoor use */
+  .input {
+    @apply w-full px-5 py-4 rounded-xl font-medium transition-all focus:outline-none min-h-[56px];
+    background-color: white;
+    border: 3px solid var(--color-border-strong);
+    color: var(--color-text-primary);
+    font-size: 17px;
+  }
+  
+  .input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-light);
+  }
+  
+  .input::placeholder {
+    color: var(--color-text-muted);
+  }
+
+  /* Touch target - Large for farmers with rough hands (48x48px minimum) */
+  .touch-target {
+    @apply min-w-[48px] min-h-[48px] flex items-center justify-center;
+  }
+  
+  .touch-target-lg {
+    @apply min-w-[56px] min-h-[56px] flex items-center justify-center;
+  }
+
+  /* Loading skeleton */
+  .skeleton {
+    @apply animate-pulse bg-gray-200 rounded;
+  }
+
+  /* Grid container for responsive layout */
+  .grid-responsive {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6;
+  }
+
+  /* Section container */
+  .section {
+    @apply py-8 md:py-12 px-4 md:px-6;
+  }
+
+  .section-container {
+    @apply max-w-7xl mx-auto;
+  }
+}
+
+@layer utilities {
+  /* Gradient background */
+  .bg-gradient-agri {
+    @apply bg-gradient-to-br from-emerald-50 via-white to-amber-50;
+  }
+
+  /* Accessibility utilities */
+  /* .sr-only is provided by default in Tailwind */
+
+  /* Responsive spacing */
+  .spacing-mobile {
+    @apply p-4 md:p-6 lg:p-8;
+  }
+
+  /* High contrast mode support */
+  @media (prefers-contrast: more) {
+    .card {
+      @apply border-2;
+    }
+    
+    .btn-primary {
+      @apply border-2 border-emerald-700;
+    }
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* Minimal transitions - Performance focused */
+* {
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+input, textarea, select {
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+/* Remove heavy animations for better performance */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Print styles */
+@media print {
+  body {
+    @apply bg-white;
+  }
+
+  .no-print {
+    @apply hidden;
+  }
+}

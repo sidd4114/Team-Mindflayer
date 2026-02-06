@@ -1,0 +1,268 @@
+// Service Worker for FarmScan PWA
+// Handles offline caching of app assets and ML model files
+
+const CACHE_NAME = 'farmscan-v1';
+const MODEL_CACHE = 'farmscan-models-v1';
+
+// Core app files to cache
+const CORE_ASSETS = [
+  '/',
+  '/manifest.json',
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png',
+];
+
+// Model files to cache for offline use
+const MODEL_FILES = [
+  '/models/image-classifier/model.json',
+  '/models/image-classifier/labels.json',
+  '/models/image-classifier/group1-shard1of3.bin',
+  '/models/image-classifier/group1-shard2of3.bin',
+  '/models/image-classifier/group1-shard3of3.bin',
+];
+
+// Install event - cache core assets
+self.addEventListener('install', (event) => {
+  console.log('[Service Worker] Installing...');
+  
+  event.waitUntil(
+    (async () => {
+      try {
+        // Cache core assets
+        const coreCache = await caches.open(CACHE_NAME);
+        console.log('[Service Worker] Caching core assets');
+        await coreCache.addAll(CORE_ASSETS);
+
+        // Cache model files
+        const modelCache = await caches.open(MODEL_CACHE);
+        console.log('[Service Worker] Caching ML model files');
+        await modelCache.addAll(MODEL_FILES);
+
+        console.log('[Service Worker] Install complete');
+        
+        // Force the waiting service worker to become the active service worker
+        self.skipWaiting();
+      } catch (error) {
+        console.error('[Service Worker] Install failed:', error);
+      }
+    })()
+  );
+});
+
+// Activate event - clean up old caches
+self.addEventListener('activate', (event) => {
+  console.log('[Service Worker] Activating...');
+  
+  event.waitUntil(
+    (async () => {
+      // Clean up old caches
+      const cacheNames = await caches.keys();
+      await Promise.all(
+        cacheNames
+          .filter((name) => name !== CACHE_NAME && name !== MODEL_CACHE)
+          .map((name) => {
+            console.log('[Service Worker] Deleting old cache:', name);
+            return caches.delete(name);
+          })
+      );
+
+      // Take control of all clients
+      await self.clients.claim();
+      console.log('[Service Worker] Activation complete');
+    })()
+  );
+});
+
+// Fetch event - serve from cache, fallback to network
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  const url = new URL(request.url);
+
+  // Skip cross-origin requests
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  // Handle model files with cache-first strategy
+  if (url.pathname.startsWith('/models/')) {
+    event.respondWith(
+      (async () => {
+        try {
+          // Try cache first
+          const cached = await caches.match(request);
+          if (cached) {
+            console.log('[Service Worker] Serving model from cache:', url.pathname);
+            return cached;
+          }
+
+          // Fallback to network (only if online)
+          try {
+            console.log('[Service Worker] Fetching model from network:', url.pathname);
+            const response = await fetch(request);
+            
+            // Cache the response
+            if (response.ok) {
+              const cache = await caches.open(MODEL_CACHE);
+              cache.put(request, response.clone());
+            }
+            
+            return response;
+          } catch (networkError) {
+            // Network failed, check cache one more time
+            const cachedFallback = await caches.match(request);
+            if (cachedFallback) {
+              console.log('[Service Worker] Serving model from cache (network failed):', url.pathname);
+              return cachedFallback;
+            }
+            // No cache available, return error response
+            console.error('[Service Worker] Model fetch failed and no cache available:', url.pathname);
+            return new Response('Model not available offline', {
+              status: 503,
+              statusText: 'Service Unavailable',
+              headers: { 'Content-Type': 'text/plain' }
+            });
+          }
+        } catch (error) {
+          console.error('[Service Worker] Model fetch failed:', error);
+          // Return error response instead of throwing
+          return new Response('Model fetch failed', {
+            status: 503,
+            statusText: 'Service Unavailable',
+            headers: { 'Content-Type': 'text/plain' }
+          });
+        }
+      })()
+    );
+    return;
+  }
+
+  // Handle app files with network-first strategy
+  event.respondWith(
+    (async () => {
+      try {
+        // Try network first
+        const response = await fetch(request);
+        
+        // Cache successful responses
+        if (response.ok) {
+          const cache = await caches.open(CACHE_NAME);
+          cache.put(request, response.clone()).catch((err) => {
+            console.warn('[Service Worker] Failed to cache response:', err);
+          });
+        }
+        
+        return response;
+      } catch (error) {
+        // Fallback to cache
+        const cached = await caches.match(request);
+        if (cached) {
+          console.log('[Service Worker] Serving from cache:', url.pathname);
+          return cached;
+        }
+
+        // If it's a navigation request and we have no cache, show offline page
+        if (request.mode === 'navigate') {
+          const offlineResponse = await caches.match('/');
+          if (offlineResponse) {
+            return offlineResponse;
+          }
+        }
+
+        // Return error response instead of throwing
+        console.warn('[Service Worker] Request failed and not cached:', url.pathname);
+        return new Response('Resource not available offline', {
+          status: 503,
+          statusText: 'Service Unavailable',
+          headers: { 'Content-Type': 'text/plain' }
+        });
+      }
+    })()
+  );
+});
+
+// Handle messages from clients
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+
+  if (event.data && event.data.type === 'CACHE_MODEL') {
+    event.waitUntil(
+      (async () => {
+        try {
+          const cache = await caches.open(MODEL_CACHE);
+          
+          // Check which files are already cached
+          const cacheChecks = await Promise.all(
+            MODEL_FILES.map(async (file) => {
+              const cached = await cache.match(file);
+              return { file, cached: !!cached };
+            })
+          );
+          
+          // Only fetch files that aren't cached
+          const filesToFetch = cacheChecks
+            .filter(({ cached }) => !cached)
+            .map(({ file }) => file);
+          
+          if (filesToFetch.length > 0) {
+            try {
+              // Try to fetch missing files (only works if online)
+              await cache.addAll(filesToFetch);
+              console.log('[Service Worker] Cached model files:', filesToFetch);
+            } catch (fetchError) {
+              // If offline, that's okay - files might already be cached from install
+              console.warn('[Service Worker] Could not fetch model files (offline?):', fetchError);
+              // Check if we have at least some files cached
+              const hasAnyCache = cacheChecks.some(({ cached }) => cached);
+              if (!hasAnyCache) {
+                throw new Error('No model files cached and offline');
+              }
+            }
+          } else {
+            console.log('[Service Worker] All model files already cached');
+          }
+          
+          event.ports[0]?.postMessage({ success: true });
+        } catch (error) {
+          console.error('[Service Worker] Cache model failed:', error);
+          event.ports[0]?.postMessage({ success: false, error: error.message });
+        }
+      })()
+    );
+  }
+
+  if (event.data && event.data.type === 'GET_CACHE_STATUS') {
+    event.waitUntil(
+      (async () => {
+        try {
+          const modelCache = await caches.open(MODEL_CACHE);
+          const cachedFiles = await Promise.all(
+            MODEL_FILES.map(async (file) => {
+              const response = await modelCache.match(file);
+              return { file, cached: !!response };
+            })
+          );
+          event.ports[0]?.postMessage({ cachedFiles });
+        } catch (error) {
+          console.error('[Service Worker] Get cache status failed:', error);
+          event.ports[0]?.postMessage({ cachedFiles: [], error: error.message });
+        }
+      })()
+    );
+  }
+});
+
+// Background sync for offline actions (future enhancement)
+self.addEventListener('sync', (event) => {
+  console.log('[Service Worker] Background sync:', event.tag);
+  
+  if (event.tag === 'sync-offline-data') {
+    event.waitUntil(
+      (async () => {
+        // Implement offline data sync logic here
+        console.log('[Service Worker] Syncing offline data...');
+      })()
+    );
+  }
+});
