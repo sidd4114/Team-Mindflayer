@@ -188,7 +188,7 @@ export default function ShopPage() {
                     width={40}
                   />
                   <Tooltip
-                    formatter={(value: number) => [`₹${value.toFixed(2)}/kg`, t("shop.price", "Price")]}
+                    formatter={(value: number | undefined) => [`₹${(value ?? 0).toFixed(2)}/kg`, t("shop.price", "Price")]}
                     labelFormatter={(label) => new Date(label).toLocaleDateString()}
                   />
                   <Line

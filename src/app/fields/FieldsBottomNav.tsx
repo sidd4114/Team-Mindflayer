@@ -15,13 +15,13 @@ export function FieldsBottomNav() {
     const isFields = pathname.startsWith("/fields") && pathname !== "/fields/new";
     const isShop = pathname.startsWith("/shop");
 
-    const linkBase = "flex flex-col items-center justify-center gap-1 min-w-[64px] md:min-w-[72px] min-h-[44px] rounded-xl active:opacity-70 transition-all";
-    const linkActive = "text-[#6B7B3F] bg-[#6B7B3F]/10";
-    const linkInactive = "text-slate-500 hover:bg-slate-50";
+    const linkBase = "flex flex-col items-center justify-center gap-1 min-w-[64px] md:min-w-[72px] min-h-[44px] rounded-xl active:opacity-80 transition-all";
+    const linkActive = "text-[#5a6b2d] bg-[#6B7B3F]/15 font-semibold";
+    const linkInactive = "text-stone-500 hover:bg-stone-100/80 hover:text-stone-700";
 
     return (
         <nav
-            className="fixed bottom-0 left-0 right-0 z-50 w-full max-w-md md:max-w-2xl lg:max-w-3xl mx-auto md:left-1/2 md:right-auto md:-translate-x-1/2 bg-white border-t border-slate-200 md:rounded-t-2xl md:shadow-lg md:border md:border-b-0 md:border-slate-200 md:mb-4 safe-area-inset-bottom"
+            className="fixed bottom-0 left-0 right-0 z-50 w-full max-w-md md:max-w-2xl lg:max-w-3xl mx-auto md:left-1/2 md:right-auto md:-translate-x-1/2 bg-white/95 backdrop-blur-md border-t border-stone-200 md:rounded-t-2xl md:shadow-[0_-4px_24px_rgba(28,25,23,0.08)] md:border md:border-b-0 md:border-stone-200 md:mb-4 safe-area-inset-bottom"
             style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
             role="navigation"
             aria-label="Main navigation"

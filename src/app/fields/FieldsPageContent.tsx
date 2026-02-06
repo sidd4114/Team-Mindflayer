@@ -46,14 +46,14 @@ export function FieldsPageContent({ fields, userName }: { fields: FieldWithReadi
 
     return (
         <div
-            className="min-h-screen bg-[#F5F3EE] pb-24"
+            className="min-h-screen pb-24"
             style={{ paddingTop: "env(safe-area-inset-top)" }}
         >
-            {/* Mobile-only: app-style header (green, greeting, no actions) */}
-            <header className="md:hidden bg-[#6B7B3F] px-4 pt-4 pb-4 rounded-b-2xl">
+            {/* Mobile: warm header with gradient */}
+            <header className="md:hidden px-4 pt-4 pb-5 rounded-b-3xl bg-gradient-to-br from-[#5a6b2d] via-[#6b7b3f] to-[#5a6b2d] shadow-lg border-b border-[#4a5a24]/30">
                 <div className="max-w-md mx-auto">
-                    <p className="text-white/90 text-sm font-medium">FarmScan</p>
-                    <h1 className="text-lg font-semibold text-white mt-0.5">
+                    <p className="text-white/85 text-sm font-medium tracking-wide">FarmScan</p>
+                    <h1 className="text-xl font-bold text-white mt-1 drop-shadow-sm">
                         {t("fields.hello", "Hello")}, {displayName}
                     </h1>
                 </div>
@@ -78,7 +78,7 @@ export function FieldsPageContent({ fields, userName }: { fields: FieldWithReadi
                             <Link href="/fields/new">
                                 <Button
                                     size="default"
-                                    className="bg-[#6B7B3F] hover:bg-[#5A6A35] text-white font-semibold rounded-xl px-4 py-2.5 min-h-[44px]"
+                                    className="bg-gradient-to-b from-[#6b7b3f] to-[#5a6b2d] hover:from-[#5a6b2d] hover:to-[#4a5a24] text-white font-semibold rounded-2xl px-4 py-2.5 min-h-[44px] shadow-md hover:shadow-lg border border-[#4a5a24]/20"
                                 >
                                     <Plus className="w-5 h-5" strokeWidth={2.5} />
                                     <span>{t("fields.addField", "Add Field")}</span>
@@ -99,7 +99,7 @@ export function FieldsPageContent({ fields, userName }: { fields: FieldWithReadi
                     <Link href="/fields/new" className="md:hidden">
                         <Button
                             size="default"
-                            className="w-full bg-[#6B7B3F] hover:bg-[#5A6A35] text-white font-semibold rounded-xl min-h-[44px]"
+                            className="w-full bg-gradient-to-b from-[#6b7b3f] to-[#5a6b2d] hover:from-[#5a6b2d] hover:to-[#4a5a24] text-white font-semibold rounded-2xl min-h-[44px] shadow-md border border-[#4a5a24]/20"
                         >
                             <Plus className="w-5 h-5" strokeWidth={2.5} />
                             <span>{t("fields.addField", "Add Field")}</span>
@@ -128,15 +128,17 @@ export function FieldsPageContent({ fields, userName }: { fields: FieldWithReadi
                         return (
                             <article
                                 key={field.id}
-                                className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 flex flex-col gap-4"
+                                className="card p-5 flex flex-col gap-4 hover:shadow-lg hover:border-stone-300/80 transition-all"
                             >
                                 <div>
-                                    <h2 className="text-lg font-bold text-slate-900 truncate pr-2">
+                                    <h2 className="text-lg font-bold text-stone-900 truncate pr-2">
                                         {field.name}
                                     </h2>
                                     <div className="flex items-center gap-2 mt-1.5">
-                                        <Wheat className="w-4 h-4 text-slate-500 shrink-0" strokeWidth={2} />
-                                        <span className="text-sm text-slate-600">
+                                        <div className="w-8 h-8 rounded-lg bg-[#6B7B3F]/12 flex items-center justify-center shrink-0">
+                                            <Wheat className="w-4 h-4 text-[#5a6b2d]" strokeWidth={2} />
+                                        </div>
+                                        <span className="text-sm text-stone-600">
                                             {t("fields.cropType", "Crop type")}: {field.crop_type}
                                         </span>
                                     </div>

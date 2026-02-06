@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import dynamic from "next/dynamic";
 import NDVIChart from "@/components/NDVIChart";
 import VCIGauge from "@/components/VCIGauge";
 import ManagementZones from "@/components/ManagementZones";
@@ -12,31 +11,43 @@ import EnhancedAlerts from "@/components/EnhancedAlerts";
 import AnalyzeButton from "../analyze-button";
 import FieldGuidance from "@/components/FieldGuidance";
 import { useI18n } from "@/contexts/I18nContext";
-import { Calendar, MapPin, TrendingUp, AlertCircle, CheckCircle2, AlertTriangle, XCircle, Mountain, Lightbulb, Droplets, Leaf, Zap, Waves, Sprout, FlaskConical, Activity, Download, RefreshCw, Layers, Navigation, ChevronLeft, ChevronUp, ChevronDown } from "lucide-react";
+import {
+    Calendar,
+    MapPin,
+    AlertCircle,
+    CheckCircle2,
+    AlertTriangle,
+    XCircle,
+    Mountain,
+    Lightbulb,
+    Waves,
+    Activity,
+    RefreshCw,
+    Navigation,
+    ChevronLeft,
+    Leaf,
+    Droplets,
+    Sprout,
+    Sun,
+    Eye,
+    Thermometer,
+    Palette,
+    Flower2,
+} from "lucide-react";
 
 const DATE_LOCALE = "en-US";
 
-const CHART_HEIGHT = 220;
-const CHART_MIN_WIDTH = 400;
-
-const MAIN_INDICES = [
-    { id: "ndvi", labelKey: "fieldDetail.cropHealth", descKey: "fieldDetail.cropHealthDesc", Icon: Leaf },
-    { id: "arvi", labelKey: "fieldDetail.cropHealth", descKey: "fieldDetail.cropHealthDesc", Icon: Activity },
-] as const;
-
-const INDEX_DESCRIPTIONS: Record<string, string> = {
-    ndvi: "fieldDetail.cropHealthDesc",
-    arvi: "fieldDetail.cropHealthDesc",
-    ndwi: "fieldDetail.cropHealthDesc",
-    evi: "fieldDetail.cropHealthDesc",
-    ndmi: "fieldDetail.cropHealthDesc",
-    ndre: "fieldDetail.cropHealthDesc",
-};
-
-const MORE_INDICES = [
-    { id: "ndwi", label: "NDWI", Icon: Droplets },
-    { id: "evi", label: "EVI", Icon: Sprout },
-    { id: "ndmi", label: "NDMI", Icon: Waves },
+// Available vegetation indices for the map
+const VEGETATION_INDICES = [
+    { id: "ndvi", label: "NDVI", description: "Crop Health", Icon: Leaf, color: "emerald" },
+    { id: "ndwi", label: "NDWI", description: "Water Content", Icon: Droplets, color: "blue" },
+    { id: "evi", label: "EVI", description: "Enhanced Vegetation", Icon: Sprout, color: "green" },
+    { id: "ndmi", label: "NDMI", description: "Moisture Index", Icon: Waves, color: "cyan" },
+    { id: "ndre", label: "NDRE", description: "Chlorophyll", Icon: Flower2, color: "lime" },
+    { id: "arvi", label: "ARVI", description: "Atmosphere Resistant", Icon: Sun, color: "amber" },
+    { id: "true_color", label: "True Color", description: "Natural View", Icon: Eye, color: "slate" },
+    { id: "false_color", label: "False Color", description: "Infrared View", Icon: Palette, color: "purple" },
+    { id: "psri", label: "PSRI", description: "Senescence", Icon: Thermometer, color: "orange" },
 ] as const;
 
 interface FieldInfo {
@@ -45,23 +56,74 @@ interface FieldInfo {
     planting_date: string | null;
 }
 
+interface Alert {
+    id: string;
+    type: string;
+    severity: string;
+    message: string;
+    detected_at: string;
+}
+
+interface Statistics {
+    isAnomaly: boolean;
+    sigma: number;
+    mean: number;
+    stdDev: number;
+    message: string;
+}
+
+interface VCIData {
+    vci: number;
+    ndvi_current: number;
+    severity: string;
+    interpretation: string;
+    recommendations: string[];
+    [key: string]: unknown;
+}
+
+interface Zone {
+    zoneNumber: number;
+    zoneType: "low" | "medium" | "high";
+    avgNdvi: number;
+    geometry?: { type: string; coordinates: number[][][] };
+    recommendations: {
+        nitrogen: number;
+        phosphorus: number;
+        potassium: number;
+    };
+}
+
+interface BenchmarkData {
+    currentYear: number;
+    comparisonYears: number[];
+    statistics: {
+        current_avg: number;
+        historical_avg: number;
+        five_year_min: number;
+        five_year_max: number;
+        performance_vs_average: number;
+    };
+    interpretation: string;
+    recommendations?: string[];
+}
+
 interface FieldDashboardProps {
     fieldId: string;
     fieldInfo: FieldInfo;
     polygon: [number, number][];
-    readings: any[];
-    alerts?: any[];
-    vciData?: any;
-    managementZones?: any[];
+    readings: { date: string; ndvi_mean?: number }[];
+    alerts?: Alert[];
+    vciData?: VCIData;
+    managementZones?: Zone[];
     managementZoneDate?: string;
-    benchmarkData?: any;
-    statisticalData?: any;
+    benchmarkData?: BenchmarkData;
+    statisticalData?: Statistics;
 }
 
-export default function FieldDashboard({ 
-    fieldId, 
+export default function FieldDashboard({
+    fieldId,
     fieldInfo,
-    polygon, 
+    polygon,
     readings,
     alerts = [],
     vciData,
@@ -87,12 +149,11 @@ export default function FieldDashboard({
     const [terrainLoading, setTerrainLoading] = useState(true);
     const [terrainError, setTerrainError] = useState<string | null>(null);
     const [generatingZones, setGeneratingZones] = useState(false);
-    const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
 
     // Async data states
-    const [vciDataState, setVciDataState] = useState<any>(vciData);
+    const [vciDataState, setVciDataState] = useState<VCIData | undefined>(vciData);
     const [vciLoading, setVciLoading] = useState(!vciData);
-    const [benchmarkDataState, setBenchmarkDataState] = useState<any>(benchmarkData);
+    const [benchmarkDataState, setBenchmarkDataState] = useState<BenchmarkData | undefined>(benchmarkData);
     const [benchmarkLoading, setBenchmarkLoading] = useState(!benchmarkData);
 
     // Fetch VCI data client-side if not provided
@@ -277,664 +338,469 @@ export default function FieldDashboard({
     };
     const healthScore = latestReading?.ndvi_mean || 0;
     const healthStatus = healthScore >= 0.7 ? 'Healthy' : healthScore >= 0.4 ? 'Moderate' : 'High Stress';
-    const healthColor = healthScore >= 0.7 ? 'bg-green-100 text-green-700 border-green-300' :
-        healthScore >= 0.4 ? 'bg-yellow-100 text-yellow-700 border-yellow-300' :
-            'bg-red-100 text-red-700 border-red-300';
     const HealthIcon = healthScore >= 0.7 ? CheckCircle2 : healthScore >= 0.4 ? AlertTriangle : XCircle;
-    const healthIconColor = healthScore >= 0.7 ? 'text-green-600' : healthScore >= 0.4 ? 'text-yellow-600' : 'text-red-600';
-    const statusColor = healthScore >= 0.7 ? "green" : healthScore >= 0.4 ? "amber" : "red";
-    const StatusIcon = HealthIcon;
+    const healthIconColor = healthScore >= 0.7 ? 'text-emerald-600' : healthScore >= 0.4 ? 'text-amber-600' : 'text-red-600';
+    const healthBgColor = healthScore >= 0.7 ? 'bg-emerald-50' : healthScore >= 0.4 ? 'bg-amber-50' : 'bg-red-50';
+    const healthBorderColor = healthScore >= 0.7 ? 'border-emerald-500' : healthScore >= 0.4 ? 'border-amber-500' : 'border-red-500';
+    const healthBadgeStyle = healthScore >= 0.7
+        ? 'bg-emerald-100 text-emerald-700 border-emerald-300'
+        : healthScore >= 0.4
+            ? 'bg-amber-100 text-amber-700 border-amber-300'
+            : 'bg-red-100 text-red-700 border-red-300';
 
     const centerLat = polygon.length ? polygon.reduce((s, p) => s + p[0], 0) / polygon.length : 0;
     const centerLng = polygon.length ? polygon.reduce((s, p) => s + p[1], 0) / polygon.length : 0;
 
     return (
-        <div className="max-w-2xl mx-auto px-4 space-y-5">
-            {/* Compact app-style header row: chevron + title, same bg as page */}
-            <header className="flex items-center gap-3 py-2 -mx-1">
-                <Link
-                    href="/fields"
-                    className="flex items-center justify-center min-w-[44px] min-h-[44px] text-slate-700 active:opacity-70"
-                    aria-label={t("fields.backToFields", "Back to Fields")}
-                >
-                    <ChevronLeft className="w-6 h-6 shrink-0" strokeWidth={2} />
-                </Link>
-                <span className="text-sm font-medium text-slate-600">
-                    {t("fieldDetail.pageTitle", "Field Details")}
-                </span>
-            </header>
+        <div className="min-h-screen pb-32">
+            <div className="max-w-3xl mx-auto px-4 sm:px-6">
 
-            {/* Field name, crop, planting date */}
-            <section className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5">
-                <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">
-                    {fieldInfo.name}
-                </h1>
-                <p className="text-slate-600 text-sm mt-1">
-                    {t("fieldDetail.crop", "Crop")}: {fieldInfo.crop_type}
-                    {fieldInfo.planting_date && (
-                        <> • {t("fieldDetail.planted", "Planted")}: {fieldInfo.planting_date}</>
+                {/* Header – clear, with subtle bar */}
+                <header className="sticky top-0 z-10 -mx-4 px-4 sm:-mx-6 sm:px-6 py-3 bg-[#faf8f4]/90 backdrop-blur-md border-b border-stone-200/60 shadow-[0_1px_0_0_rgba(255,255,255,0.6)_inset]">
+                    <div className="flex items-center gap-3">
+                        <Link
+                            href="/fields"
+                            className="flex items-center justify-center w-11 h-11 rounded-2xl bg-white/90 border border-stone-200/80 text-stone-700 shadow-sm hover:bg-white hover:shadow hover:border-stone-300 active:scale-95 transition-all"
+                            aria-label={t("fields.backToFields", "Back to Fields")}
+                        >
+                            <ChevronLeft className="w-5 h-5" strokeWidth={2.5} />
+                        </Link>
+                        <span className="text-lg font-semibold text-stone-800 tracking-tight">
+                            {t("fieldDetail.pageTitle", "Field Details")}
+                        </span>
+                    </div>
+                </header>
+
+                <main className="space-y-4 sm:space-y-5 pt-2">
+
+                    {/* Alert Banner */}
+                    {alerts.length > 0 && (
+                        <div className="card p-4 rounded-2xl border-amber-200/80 bg-gradient-to-br from-amber-50 to-orange-50/50 shadow-sm">
+                            <div className="flex items-start gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+                                    <AlertCircle className="w-5 h-5 text-amber-700" strokeWidth={2.5} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold text-amber-900">{alerts[0].message}</p>
+                                    {alerts.length > 1 && (
+                                        <p className="text-xs text-amber-800/80 mt-1">+{alerts.length - 1} more alerts</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
                     )}
-                </p>
-            </section>
 
-            {/* Active alerts (compact) */}
-            {alerts.length > 0 && (
-                <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-4">
-                    <p className="text-sm font-semibold text-amber-900">
-                        {alerts[0].message}
-                    </p>
-                    {alerts.length > 1 && (
-                        <p className="text-xs text-amber-700 mt-1">+{alerts.length - 1} more</p>
-                    )}
-                </div>
-            )}
-
-            {/* Date & location */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-[#6B7B3F]" strokeWidth={2.5} />
-                    <select
-                        className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 font-medium text-slate-900 text-base cursor-pointer focus:border-[#6B7B3F] focus:outline-none min-h-[44px]"
-                        value={selectedDate}
-                        onChange={(e) => setSelectedDate(e.target.value)}
-                    >
-                        {uniqueDates.slice().reverse().map((date) => (
-                            <option key={date} value={date}>
-                                {new Date(date).toLocaleDateString(DATE_LOCALE, {
-                                    month: "short",
-                                    day: "numeric",
-                                    year: "numeric",
-                                })}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-                <div className="flex items-center gap-2 text-slate-600 text-sm">
-                    <MapPin className="w-4 h-4 shrink-0" strokeWidth={2} />
-                    <span>{centerLat.toFixed(4)}° N, {centerLng.toFixed(4)}° E</span>
-                </div>
-            </div>
-
-            {/* GPS-guided navigation to field center */}
-            <section className="bg-white rounded-2xl border border-slate-200/80 p-4">
-                <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-                    <Navigation className="w-5 h-5 text-[#6B7B3F]" strokeWidth={2} />
-                    {t("fieldDetail.guideToField", "Guide me to field")}
-                </h2>
-                <div className="mt-3">
-                    <FieldGuidance
-                        target={{ lat: centerLat, lng: centerLng }}
-                        targetLabel={t("fieldDetail.fieldCenter", "Field center")}
-                    />
-                </div>
-            </section>
-
-            {/* Health: Is my crop okay? – one status prominent */}
-            <section className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-                <h2 className="text-base font-semibold text-slate-900 px-5 pt-5 pb-2">
-                    {t("fieldDetail.isMyCropOk", "Is my crop okay?")}
-                </h2>
-                <div className="p-5 pt-2 flex flex-col sm:flex-row gap-4">
-                    {/* Current status – prominent */}
-                    <div
-                        className={`flex-1 flex items-center gap-4 p-4 rounded-xl border-2 ${
-                            statusColor === "green"
-                                ? "bg-emerald-50 border-emerald-300"
-                                : statusColor === "amber"
-                                  ? "bg-amber-50 border-amber-300"
-                                  : "bg-red-50 border-red-300"
-                        }`}
-                    >
-                        <div
-                            className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${
-                                statusColor === "green"
-                                    ? "bg-emerald-500"
-                                    : statusColor === "amber"
-                                      ? "bg-amber-500"
-                                      : "bg-red-500"
-                            }`}
-                        >
-                            <StatusIcon className="w-8 h-8 text-white" strokeWidth={2.5} />
-                        </div>
-                        <div className="flex flex-col items-center gap-2 p-2.5 bg-amber-50 rounded-lg border-2 border-amber-200">
-                            <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center">
-                                <AlertTriangle className="w-5 h-5 text-white" strokeWidth={2.5} />
-                            </div>
-                            <span className="text-xs font-bold text-amber-700">Moderate</span>
-                        </div>
-                        <div className="flex flex-col items-center gap-2 p-2.5 bg-green-50 rounded-lg border-2 border-green-200">
-                            <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center">
-                                <CheckCircle2 className="w-5 h-5 text-white" strokeWidth={2.5} />
-                            </div>
-                            <span className="text-xs font-bold text-green-700">Healthy</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Satellite Map */}
-                <div className="bg-white rounded-xl shadow-md overflow-hidden">
-                    <div className="aspect-square bg-gray-900 relative">
-                        {mapLoading ? (
-                            <div className="absolute inset-0 flex items-center justify-center text-white">
-                                <div className="text-center">
-                                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-3"></div>
-                                    <span className="text-sm">Loading satellite image...</span>
+                    {/* Date Selector & Location */}
+                    <div className="card p-4 rounded-2xl">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                                <div className="w-11 h-11 rounded-xl bg-[#6B7B3F]/12 flex items-center justify-center shrink-0 border border-[#6B7B3F]/20">
+                                    <Calendar className="w-5 h-5 text-[#5a6b2d]" strokeWidth={2} />
                                 </div>
+                                <select
+                                    className="flex-1 sm:flex-none bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 font-medium text-slate-900 text-sm sm:text-base cursor-pointer focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none min-h-11 transition-all"
+                                    value={selectedDate}
+                                    onChange={(e) => setSelectedDate(e.target.value)}
+                                >
+                                    {uniqueDates.slice().reverse().map((date) => (
+                                        <option key={date} value={date}>
+                                            {new Date(date).toLocaleDateString(DATE_LOCALE, {
+                                                month: "short",
+                                                day: "numeric",
+                                                year: "numeric",
+                                            })}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
-                        ) : mapUrl ? (
-                            <>
-                                <div className="absolute inset-0 overflow-hidden">
-                                    <img 
-                                        src={mapUrl} 
-                                        alt="Field Sentinel Map" 
-                                        className="w-full h-full object-cover"
-                                        style={{
-                                            transform: 'scale(3)',
-                                            transformOrigin: 'center center'
-                                        }}
-                                    />
-                                </div>
-                                {/* Field Boundary & Zone Overlays */}
-                                {mapBounds && (
-                                    <svg 
-                                        className="absolute inset-0 w-full h-full pointer-events-none" 
-                                        viewBox="0 0 100 100" 
-                                        preserveAspectRatio="none"
-                                        style={{
-                                            transform: 'scale(3)',
-                                            transformOrigin: 'center center'
-                                        }}
-                                    >
-                                        {/* Field Boundary - dashed outline */}
-                                        <polygon 
-                                            points={polygon.map((p) => {
-                                                const x = ((p[1] - mapBounds.minLng) / (mapBounds.maxLng - mapBounds.minLng)) * 100;
-                                                const y = ((mapBounds.maxLat - p[0]) / (mapBounds.maxLat - mapBounds.minLat)) * 100;
-                                                return `${x},${y}`;
-                                            }).join(' ')}
-                                            fill="none"
-                                            stroke="#3b82f6"
-                                            strokeWidth="0.6"
-                                            strokeDasharray="2,1.5"
-                                            opacity="1"
-                                        />
-                                    </svg>
-                                )}
-                                
-                                {/* Legend */}
-                                <div className="absolute top-2 right-2 bg-black bg-opacity-80 text-white text-xs px-3 py-2 rounded-lg space-y-1.5">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-4 h-0.5 border-t-2 border-dashed border-blue-400"></div>
-                                        <span>Field Boundary</span>
-                                    </div>
-                                </div>
-                            </>
-                        ) : (
-                            <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                                <span>Select a date to view imagery</span>
+                            <div className="flex items-center gap-2 text-slate-500 text-sm">
+                                <MapPin className="w-4 h-4 shrink-0" strokeWidth={2} />
+                                <span className="font-medium">{centerLat.toFixed(4)}°N, {centerLng.toFixed(4)}°E</span>
                             </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Field Health Status Card - PROMINENT */}
-                <div className={`bg-white rounded-xl p-5 border-4 ${healthScore >= 0.7 ? 'border-green-500' : healthScore >= 0.4 ? 'border-amber-500' : 'border-red-500'} shadow-lg`}>
-                    <div className="flex items-start gap-4 mb-4">
-                        <div className={`p-3 rounded-xl ${healthScore >= 0.7 ? 'bg-green-100' : healthScore >= 0.4 ? 'bg-amber-100' : 'bg-red-100'}`}>
-                            <HealthIcon className={`w-9 h-9 ${healthIconColor}`} strokeWidth={2.5} />
-                        </div>
-                        <div className="flex-1">
-                            <div className="flex items-center justify-between mb-1">
-                                <h3 className="font-bold text-xl text-stone-900">Field Health</h3>
-                                <span className={`font-bold text-base px-3 py-1.5 rounded-lg ${healthScore >= 0.7 ? 'bg-green-100 text-green-700 border-2 border-green-400' : healthScore >= 0.4 ? 'bg-amber-100 text-amber-700 border-2 border-amber-400' : 'bg-red-100 text-red-700 border-2 border-red-400'}`}>
-                                    {healthStatus}
-                                </span>
-                            </div>
-                            <p className="text-sm text-stone-600 font-medium mb-3">शेत आरोग्य</p>
-                            <p className="text-base text-stone-800 leading-relaxed font-medium">
-                                {healthScore >= 0.7
-                                    ? `Excellent crop health. NDVI: ${healthScore.toFixed(2)}`
-                                    : healthScore >= 0.4
-                                        ? `Moderate stress detected. Check red zones on map.`
-                                        : `High stress. Immediate action needed. NDVI: ${healthScore.toFixed(2)}`
-                                }
-                            </p>
                         </div>
                     </div>
 
-                    <div className="flex gap-3 pt-3 border-t-2 border-stone-200">
-                        <button 
-                            onClick={() => router.push('/coming-soon')}
-                            className="flex-1 bg-white border-2 border-emerald-600 text-emerald-700 rounded-xl py-3 font-bold text-base hover:bg-emerald-50 active:scale-[0.98] transition-all"
-                        >
-                            View Report
-                        </button>
-                        <button 
-                            onClick={() => router.push('/coming-soon')}
-                            className="flex-1 bg-amber-600 text-white rounded-xl py-3 font-bold text-base hover:bg-amber-700 active:scale-[0.98] transition-all border-2 border-amber-700"
-                        >
-                            Get Advice
-                        </button>
-                    </div>
-                </div>
-
-                {/* Enhanced Alerts Section */}
-                {(alerts.length > 0 || statisticalData) && (
-                    <div className="bg-white rounded-xl p-5 border-2 border-red-200 shadow-md">
-                        <h3 className="font-bold text-stone-900 text-lg mb-4 flex items-center gap-2">
-                            <AlertCircle className="w-6 h-6 text-red-600" strokeWidth={2.5} />
-                            Active Alerts & Anomalies
-                        </h3>
-                        <EnhancedAlerts alerts={alerts} statistics={statisticalData} />
-                    </div>
-                )}
-
-                {/* Advanced Features Grid */}
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-                    {/* VCI Gauge */}
-                    {vciLoading ? (
-                         <div className="bg-white rounded-xl p-5 border-2 border-stone-100 shadow-md h-full min-h-[300px] flex flex-col items-center justify-center gap-3 animate-pulse">
-                            <div className="w-12 h-12 bg-stone-200 rounded-full"></div>
-                            <div className="h-4 w-32 bg-stone-200 rounded"></div>
-                            <div className="text-sm text-stone-400">Analyzing drought conditions...</div>
+                    {/* GPS Navigation Card */}
+                    <div className="card p-4 rounded-2xl">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="w-11 h-11 rounded-xl bg-sky-100/80 flex items-center justify-center shrink-0 border border-sky-200/80">
+                                <Navigation className="w-5 h-5 text-sky-700" strokeWidth={2} />
+                            </div>
+                            <h2 className="text-base font-semibold text-stone-800">
+                                {t("fieldDetail.guideToField", "Navigate to Field")}
+                            </h2>
                         </div>
-                    ) : vciDataState && (
-                        <VCIGauge
-                            vci={vciDataState.vci}
-                            ndvi_current={vciDataState.ndvi_current}
-                            severity={vciDataState.severity}
-                            interpretation={vciDataState.interpretation}
-                            recommendations={vciDataState.recommendations}
+                        <FieldGuidance
+                            target={{ lat: centerLat, lng: centerLng }}
+                            targetLabel={t("fieldDetail.fieldCenter", "Field center")}
                         />
-                    )}
+                    </div>
 
-                    {/* Management Zones - Full width when alone */}
-                    <div className={(!vciDataState && !vciLoading) ? "xl:col-span-2" : ""}>
-                        {managementZones.length > 0 && managementZoneDate ? (
-                            <ManagementZones
-                                zones={managementZones}
-                                analysisDate={managementZoneDate}
-                                polygon={polygon}
-                                onExportVRA={handleExportVRA}
-                                onExportGeojson={handleExportGeojson}
-                            />
-                        ) : (
-                            <div className="bg-white rounded-xl p-5 border-2 border-purple-200 shadow-md">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="bg-purple-100 rounded-lg p-2">
-                                        <Activity className="w-6 h-6 text-purple-700" strokeWidth={2.5} />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-bold text-stone-900 text-lg">Management Zones</h3>
-                                        <p className="text-sm text-stone-600">Generate productivity zones</p>
-                                    </div>
-                                </div>
-                                <div className="text-center py-6">
-                                    <p className="text-stone-600 mb-4">No zones generated yet</p>
+                    {/* Index Selector */}
+                    <div className="card rounded-2xl p-4">
+                        <h3 className="text-sm font-semibold text-stone-800 mb-3">
+                            {t("fieldDetail.selectIndex", "Select View")}
+                        </h3>
+                        <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+                            {VEGETATION_INDICES.map(({ id, label, Icon, color }) => {
+                                const isSelected = selectedIndex === id;
+                                const colorClasses: Record<string, { bg: string; text: string; border: string; selectedBg: string }> = {
+                                    emerald: { bg: "bg-emerald-50", text: "text-emerald-600", border: "border-emerald-200", selectedBg: "bg-emerald-600" },
+                                    blue: { bg: "bg-blue-50", text: "text-blue-600", border: "border-blue-200", selectedBg: "bg-blue-600" },
+                                    green: { bg: "bg-green-50", text: "text-green-600", border: "border-green-200", selectedBg: "bg-green-600" },
+                                    cyan: { bg: "bg-cyan-50", text: "text-cyan-600", border: "border-cyan-200", selectedBg: "bg-cyan-600" },
+                                    lime: { bg: "bg-lime-50", text: "text-lime-600", border: "border-lime-200", selectedBg: "bg-lime-600" },
+                                    amber: { bg: "bg-amber-50", text: "text-amber-600", border: "border-amber-200", selectedBg: "bg-amber-600" },
+                                    slate: { bg: "bg-slate-50", text: "text-slate-600", border: "border-slate-200", selectedBg: "bg-slate-600" },
+                                    purple: { bg: "bg-purple-50", text: "text-purple-600", border: "border-purple-200", selectedBg: "bg-purple-600" },
+                                    orange: { bg: "bg-orange-50", text: "text-orange-600", border: "border-orange-200", selectedBg: "bg-orange-600" },
+                                };
+                                const colors = colorClasses[color] || colorClasses.emerald;
+                                
+                                return (
                                     <button
-                                        onClick={handleGenerateZones}
-                                        disabled={generatingZones}
-                                        className="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2 mx-auto"
+                                        key={id}
+                                        onClick={() => setSelectedIndex(id)}
+                                        className={`flex flex-col items-center gap-1.5 px-3 py-2.5 rounded-xl border-2 min-w-18 transition-all shrink-0 ${
+                                            isSelected
+                                                ? `${colors.selectedBg} text-white border-transparent shadow-lg`
+                                                : `${colors.bg} ${colors.text} ${colors.border} hover:shadow-md`
+                                        }`}
                                     >
-                                        {generatingZones ? (
-                                            <>
-                                                <RefreshCw className="w-4 h-4 animate-spin" />
-                                                Generating...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Activity className="w-4 h-4" />
-                                                Generate Zones
-                                            </>
-                                        )}
+                                        <Icon className="w-5 h-5" strokeWidth={2} />
+                                        <span className="text-xs font-bold">{label}</span>
                                     </button>
-                                </div>
-                            </div>
+                                );
+                            })}
+                        </div>
+                        {/* Selected index description */}
+                        {VEGETATION_INDICES.find(i => i.id === selectedIndex) && (
+                            <p className="text-xs text-slate-500 mt-2 pl-1">
+                                {VEGETATION_INDICES.find(i => i.id === selectedIndex)?.description}
+                                {selectedIndex === "ndvi" && " – measures vegetation greenness and health"}
+                                {selectedIndex === "ndwi" && " – detects water stress in plants"}
+                                {selectedIndex === "evi" && " – better for high biomass areas"}
+                                {selectedIndex === "ndmi" && " – monitors leaf moisture content"}
+                                {selectedIndex === "ndre" && " – sensitive to chlorophyll variations"}
+                                {selectedIndex === "arvi" && " – corrects for atmospheric effects"}
+                                {selectedIndex === "true_color" && " – natural RGB satellite view"}
+                                {selectedIndex === "false_color" && " – highlights vegetation in red"}
+                                {selectedIndex === "psri" && " – indicates plant stress and aging"}
+                            </p>
                         )}
                     </div>
-                </div>
 
-                {/* Historical Benchmark */}
-                {benchmarkLoading ? (
-                     <div className="bg-white rounded-xl p-5 border-2 border-stone-100 shadow-md h-64 flex flex-col items-center justify-center gap-3 animate-pulse">
-                        <div className="w-16 h-16 bg-stone-200 rounded-md"></div>
-                        <div className="h-4 w-48 bg-stone-200 rounded"></div>
-                        <div className="text-sm text-stone-400">Comparing with historical seasons...</div>
+                    {/* Satellite Map */}
+                    <div className="card rounded-2xl overflow-hidden border-stone-200/90 shadow-lg">
+                        <div className="aspect-video sm:aspect-4/3 bg-stone-800 relative ring-1 ring-black/5">
+                            {mapLoading ? (
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <div className="text-center">
+                                        <div className="w-10 h-10 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                                        <span className="text-sm text-slate-300">Loading imagery...</span>
+                                    </div>
+                                </div>
+                            ) : mapUrl ? (
+                                <>
+                                    <div className="absolute inset-0 overflow-hidden">
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img
+                                            src={mapUrl}
+                                            alt="Satellite view of field"
+                                            className="w-full h-full object-cover"
+                                            style={{ transform: 'scale(3)', transformOrigin: 'center' }}
+                                        />
+                                    </div>
+                                    {mapBounds && (
+                                        <svg
+                                            className="absolute inset-0 w-full h-full pointer-events-none"
+                                            viewBox="0 0 100 100"
+                                            preserveAspectRatio="none"
+                                            style={{ transform: 'scale(3)', transformOrigin: 'center' }}
+                                        >
+                                            <polygon
+                                                points={polygon.map((p) => {
+                                                    const x = ((p[1] - mapBounds.minLng) / (mapBounds.maxLng - mapBounds.minLng)) * 100;
+                                                    const y = ((mapBounds.maxLat - p[0]) / (mapBounds.maxLat - mapBounds.minLat)) * 100;
+                                                    return `${x},${y}`;
+                                                }).join(' ')}
+                                                fill="none"
+                                                stroke="#3b82f6"
+                                                strokeWidth="0.5"
+                                                strokeDasharray="2,1.5"
+                                            />
+                                        </svg>
+                                    )}
+                                    <div className="absolute bottom-3 right-3 bg-black/70 text-white text-xs px-2.5 py-1.5 rounded-lg flex items-center gap-2">
+                                        <div className="w-3 h-0 border-t border-dashed border-blue-400" />
+                                        <span>Boundary</span>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="absolute inset-0 flex items-center justify-center text-slate-400">
+                                    <span className="text-sm">Select a date to view imagery</span>
+                                </div>
+                            )}
+                        </div>
                     </div>
-                ) : benchmarkDataState && (
-                    <HistoricalBenchmark data={benchmarkDataState} />
-                )}
 
-                {/* Advanced Context Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    {/* Terrain Risk Card */}
-                    {terrainData ? (
-                        <div className="bg-white rounded-xl p-4 border-2 border-purple-200 shadow-md" style={{borderLeftWidth: '4px', borderLeftColor: '#a855f7'}}>
-                            <div className="flex items-center gap-2 mb-3">
-                                <div className="bg-purple-100 rounded-lg p-2">
-                                    <Mountain className="w-5 h-5 text-purple-700" strokeWidth={2.5} />
-                                </div>
-                                <h3 className="font-bold text-stone-900 text-base">Terrain</h3>
+                    {/* Health Status Card – one clear status, strong visual */}
+                    <div className={`card rounded-2xl p-5 border-2 ${healthBorderColor} overflow-hidden relative`}>
+                        <div className="flex items-start gap-4">
+                            <div className={`p-4 rounded-2xl ${healthBgColor} shrink-0 shadow-inner border border-white/50`}>
+                                <HealthIcon className={`w-8 h-8 sm:w-9 sm:h-9 ${healthIconColor}`} strokeWidth={2.5} />
                             </div>
-                            <div className="space-y-2.5">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-stone-700 font-medium text-sm">Elevation</span>
-                                    <span className="font-bold text-stone-900 text-sm">{terrainData.elevation.min}m - {terrainData.elevation.max}m</span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-stone-700 font-medium text-sm">Slope</span>
-                                    <span className="font-bold text-stone-900 text-sm">{terrainData.slope.mean}°</span>
-                                </div>
-                                <div className="grid grid-cols-3 gap-2 mt-3">
-                                    <div className={`text-center p-2 rounded-lg font-bold text-xs ${terrainData.risks.waterlogging === 'high' ? 'bg-red-100 text-red-700 border-2 border-red-300' : terrainData.risks.waterlogging === 'medium' ? 'bg-amber-100 text-amber-700 border-2 border-amber-300' : 'bg-green-100 text-green-700 border-2 border-green-300'}`}>
-                                        <div className="text-xs mb-0.5">Waterlog</div>
-                                        <div className="capitalize">{terrainData.risks.waterlogging}</div>
-                                    </div>
-                                    <div className={`text-center p-2 rounded-lg font-bold text-xs ${terrainData.risks.runoff === 'high' ? 'bg-red-100 text-red-700 border-2 border-red-300' : terrainData.risks.runoff === 'medium' ? 'bg-amber-100 text-amber-700 border-2 border-amber-300' : 'bg-green-100 text-green-700 border-2 border-green-300'}`}>
-                                        <div className="text-xs mb-0.5">Runoff</div>
-                                        <div className="capitalize">{terrainData.risks.runoff}</div>
-                                    </div>
-                                    <div className={`text-center p-2 rounded-lg font-bold text-xs ${terrainData.risks.erosion === 'high' ? 'bg-red-100 text-red-700 border-2 border-red-300' : terrainData.risks.erosion === 'medium' ? 'bg-amber-100 text-amber-700 border-2 border-amber-300' : 'bg-green-100 text-green-700 border-2 border-green-300'}`}>
-                                        <div className="text-xs mb-0.5">Erosion</div>
-                                        <div className="capitalize">{terrainData.risks.erosion}</div>
-                                    </div>
-                                </div>
-                                {terrainData.recommendations.length > 0 && (
-                                    <div className="mt-3 p-2.5 bg-purple-50 rounded-lg text-xs text-stone-700 font-medium border-2 border-purple-200">
-                                        <div className="flex items-start gap-2">
-                                            <Lightbulb className="w-4 h-4 text-purple-600 mt-0.5 shrink-0" strokeWidth={2.5} />
-                                            <span>{terrainData.recommendations[0]}</span>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    ) : terrainLoading ? (
-                        <div className="bg-white rounded-xl p-4 border-2 border-stone-200">
-                            <div className="flex items-center gap-2 mb-3">
-                                <Mountain className="w-5 h-5 text-purple-600" strokeWidth={2.5} />
-                                <h3 className="font-bold text-stone-900 text-base">Terrain</h3>
-                            </div>
-                            <div className="flex items-center justify-center py-6 text-stone-500">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
-                            </div>
-                        </div>
-                    ) : terrainError ? (
-                        <div className="bg-white rounded-xl p-4 border-2 border-red-300">
-                            <div className="flex items-center gap-2 mb-3">
-                                <Mountain className="w-5 h-5 text-purple-600" strokeWidth={2.5} />
-                                <h3 className="font-bold text-stone-900 text-base">Terrain</h3>
-                            </div>
-                            <div className="text-sm text-red-700 p-3 bg-red-50 rounded-lg border-2 border-red-200">
-                                <div className="font-bold mb-1 flex items-center gap-1.5">
-                                    <AlertTriangle className="w-4 h-4" strokeWidth={2.5} />
-                                    <span>Data Unavailable</span>
-                                </div>
-                                <div className="text-xs">{terrainError}</div>
-                            </div>
-                        </div>
-                    ) : null}
-
-                    {/* SAR Moisture Card */}
-                    {sarData && (
-                        <div className="card p-5" style={{borderLeft: '4px solid #06b6d4'}}>
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="bg-cyan-100 rounded-xl p-3">
-                                    <Waves className="w-6 h-6 text-cyan-700" strokeWidth={2.5} />
-                                </div>
-                                <h3 className="font-bold text-stone-900 text-lg">Radar Monitoring</h3>
-                            </div>
-                            <div className="space-y-3">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-stone-700 font-medium">Status:</span>
-                                    <span className={`font-bold px-3 py-2 rounded-xl text-sm ${sarData.moistureLevel === 'wet' ? 'bg-blue-100 text-blue-700 border-2 border-blue-300' : sarData.moistureLevel === 'dry' ? 'bg-red-100 text-red-700 border-2 border-red-300' : 'bg-amber-100 text-amber-700 border-2 border-amber-300'}`}>
-                                        {sarData.moistureLevel.toUpperCase()}
+                            <div className="flex-1 min-w-0">
+                                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                                    <h3 className="text-lg sm:text-xl font-bold text-stone-900">
+                                        {t("fieldDetail.fieldHealth", "Field Health")}
+                                    </h3>
+                                    <span className={`font-bold text-sm px-3 py-1.5 rounded-xl border-2 ${healthBadgeStyle} shadow-sm`}>
+                                        {healthStatus}
                                     </span>
                                 </div>
-                                <div className="text-sm text-stone-700 font-medium mt-3 p-3 bg-cyan-50 rounded-xl">
-                                    {sarData.message}
-                                </div>
-                                <div className="mt-3 space-y-2">
-                                    {sarData.advantages.map((adv: string, i: number) => (
-                                        <div key={i} className="text-sm text-stone-700 flex items-start gap-2">
-                                            <div className="w-1.5 h-1.5 bg-cyan-600 rounded-full mt-2 shrink-0"></div>
-                                            <span>{adv}</span>
+                                <p className="text-sm sm:text-base text-stone-700 leading-relaxed">
+                                    {healthScore >= 0.7
+                                        ? `Excellent crop health detected. NDVI: ${healthScore.toFixed(2)}`
+                                        : healthScore >= 0.4
+                                            ? 'Moderate stress detected. Review the map for problem areas.'
+                                            : `High stress detected. Immediate action recommended. NDVI: ${healthScore.toFixed(2)}`}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex gap-3 mt-4 pt-4 border-t border-stone-200/80">
+                            <button
+                                onClick={() => router.push('/coming-soon')}
+                                className="btn-outline flex-1 text-sm sm:text-base py-2.5 min-h-11"
+                            >
+                                {t("fieldDetail.viewReport", "View Report")}
+                            </button>
+                            <button
+                                onClick={() => router.push('/coming-soon')}
+                                className="btn-secondary flex-1 text-sm sm:text-base py-2.5 min-h-11"
+                            >
+                                {t("fieldDetail.getAdvice", "Get Advice")}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Alerts & Anomalies */}
+                    {(alerts.length > 0 || statisticalData) && (
+                        <div className="card rounded-2xl p-5 border-l-4 border-l-red-500 bg-gradient-to-r from-red-50/50 to-white">
+                            <h3 className="font-bold text-stone-900 text-base sm:text-lg mb-4 flex items-center gap-2">
+                                <AlertCircle className="w-5 h-5 text-red-600" strokeWidth={2.5} />
+                                {t("fieldDetail.alerts", "Active Alerts")}
+                            </h3>
+                            <EnhancedAlerts alerts={alerts} statistics={statisticalData} />
+                        </div>
+                    )}
+
+                    {/* VCI & Zones Grid */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
+                        {/* VCI Gauge */}
+                        {vciLoading ? (
+                            <div className="card rounded-2xl p-5 min-h-64 flex flex-col items-center justify-center gap-3 animate-pulse">
+                                <div className="w-12 h-12 bg-slate-200 rounded-full" />
+                                <div className="h-4 w-32 bg-slate-200 rounded" />
+                                <span className="text-sm text-slate-400">Analyzing drought conditions...</span>
+                            </div>
+                        ) : vciDataState && (
+                            <VCIGauge
+                                vci={vciDataState.vci}
+                                ndvi_current={vciDataState.ndvi_current}
+                                severity={vciDataState.severity}
+                                interpretation={vciDataState.interpretation}
+                                recommendations={vciDataState.recommendations}
+                            />
+                        )}
+
+                        {/* Management Zones */}
+                        <div className={(!vciDataState && !vciLoading) ? "lg:col-span-2" : ""}>
+                            {managementZones.length > 0 && managementZoneDate ? (
+                                <ManagementZones
+                                    zones={managementZones}
+                                    analysisDate={managementZoneDate}
+                                    polygon={polygon}
+                                    onExportVRA={handleExportVRA}
+                                    onExportGeojson={handleExportGeojson}
+                                />
+                            ) : (
+                                <div className="card rounded-2xl p-5 border-l-4 border-l-purple-500">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center">
+                                            <Activity className="w-5 h-5 text-purple-600" strokeWidth={2.5} />
                                         </div>
-                                    ))}
+                                        <div>
+                                            <h3 className="font-bold text-slate-900">Management Zones</h3>
+                                            <p className="text-sm text-slate-500">Generate productivity zones</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-center py-4">
+                                        <p className="text-slate-500 mb-4 text-sm">No zones generated yet</p>
+                                        <button
+                                            onClick={handleGenerateZones}
+                                            disabled={generatingZones}
+                                            className="btn-primary px-5 py-2.5 mx-auto"
+                                        >
+                                            {generatingZones ? (
+                                                <>
+                                                    <RefreshCw className="w-4 h-4 animate-spin" />
+                                                    Generating...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Activity className="w-4 h-4" />
+                                                    Generate Zones
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* NDVI Chart */}
-                <div className="bg-white rounded-xl border-2 border-stone-200 shadow-md p-5">
-                    <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-bold text-stone-900 text-base">NDVI Trends</h3>
-                        <AnalyzeButton fieldId={fieldId} />
-                    </div>
-                    <div className="h-64">
-                        {chartData.length > 0 ? (
-                            <NDVIChart data={chartData} />
-                        ) : (
-                            <div className="h-full flex items-center justify-center text-stone-500">
-                                <div className="text-center">
-                                    <p className="font-medium mb-2">No data available</p>
-                                    <p className="text-sm">Run analysis to see trends</p>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-                <div className="flex gap-2 px-5 pb-5">
-                    <button
-                        type="button"
-                        onClick={() => router.push("/coming-soon")}
-                        className="flex-1 bg-[#6B7B3F] text-white rounded-xl py-3 font-semibold text-base active:scale-[0.98] min-h-[48px]"
-                    >
-                        {t("fieldDetail.viewReport", "View Report")}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => router.push("/coming-soon")}
-                        className="flex-1 border-2 border-[#6B7B3F] text-[#6B7B3F] rounded-xl py-3 font-semibold text-base active:scale-[0.98] min-h-[48px]"
-                    >
-                        {t("fieldDetail.getAdvice", "Get Advice")}
-                    </button>
-                </div>
-            </section>
-
-            {/* Choose what you want to check */}
-            <section className="bg-white rounded-2xl border border-slate-200/80 p-5">
-                <h2 className="text-base font-semibold text-slate-900 mb-4">
-                    {t("fieldDetail.chooseWhatToCheck", "Choose what you want to check")}
-                </h2>
-                <div className="grid grid-cols-2 gap-2">
-                    {MAIN_INDICES.map(({ id, labelKey, descKey, Icon }) => (
-                        <button
-                            key={id}
-                            type="button"
-                            onClick={() => setSelectedIndex(id)}
-                            className={`flex items-center gap-2 p-3 rounded-xl border-2 min-h-[48px] text-left transition-all ${
-                                selectedIndex === id
-                                    ? "bg-[#6B7B3F] text-white border-[#5A6A35]"
-                                    : "bg-slate-50 text-slate-800 border-slate-200"
-                            }`}
-                        >
-                            <Icon className="w-5 h-5 shrink-0" strokeWidth={2.5} />
-                            <span className="text-sm font-semibold truncate">{t(labelKey)}</span>
-                        </button>
-                    ))}
-                </div>
-                <p className="mt-3 text-sm text-slate-600 px-1">
-                    {t(INDEX_DESCRIPTIONS[selectedIndex] || "fieldDetail.cropHealthDesc")}
-                </p>
-
-                {/* More options – collapsible */}
-                <div className="mt-4 border-t border-slate-200 pt-4">
-                    <button
-                        type="button"
-                        onClick={() => setMoreOptionsOpen((o) => !o)}
-                        className="flex items-center justify-between w-full py-2 text-slate-700 font-medium min-h-[44px]"
-                    >
-                        <span>{t("fieldDetail.moreOptions", "More options")}</span>
-                        {moreOptionsOpen ? (
-                            <ChevronUp className="w-5 h-5" strokeWidth={2} />
-                        ) : (
-                            <ChevronDown className="w-5 h-5" strokeWidth={2} />
-                        )}
-                    </button>
-                    {moreOptionsOpen && (
-                        <div className="grid grid-cols-2 gap-2 mt-2">
-                            {MORE_INDICES.map(({ id, label, Icon }) => (
-                                <button
-                                    key={id}
-                                    type="button"
-                                    onClick={() => setSelectedIndex(id)}
-                                    className={`flex items-center gap-2 p-3 rounded-xl border-2 min-h-[48px] text-left ${
-                                        selectedIndex === id
-                                            ? "bg-[#6B7B3F] text-white border-[#5A6A35]"
-                                            : "bg-slate-50 text-slate-700 border-slate-200"
-                                    }`}
-                                >
-                                    <Icon className="w-5 h-5 shrink-0" strokeWidth={2} />
-                                    <span className="text-sm font-medium">{label}</span>
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </section>
-
-            {/* Your Field Map */}
-            <section className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-                <h2 className="text-base font-semibold text-slate-900 px-5 pt-5 pb-3">
-                    {t("fieldDetail.yourFieldMap", "Your Field Map")}
-                </h2>
-                <div className="aspect-square bg-slate-100 relative">
-                    {mapLoading ? (
-                        <div className="absolute inset-0 flex items-center justify-center text-slate-500">
-                            <span className="text-sm">{t("fieldDetail.loadingMap", "Loading map...")}</span>
-                        </div>
-                    ) : mapUrl ? (
-                        <>
-                            <div className="absolute inset-0 overflow-hidden">
-                                <img
-                                    src={mapUrl}
-                                    alt="Field map"
-                                    className="w-full h-full object-cover"
-                                    style={{ transform: "scale(3)", transformOrigin: "center center" }}
-                                />
-                            </div>
-                            {mapBounds && (
-                                <svg
-                                    className="absolute inset-0 w-full h-full pointer-events-none"
-                                    viewBox="0 0 100 100"
-                                    preserveAspectRatio="none"
-                                    style={{ transform: "scale(3)", transformOrigin: "center center" }}
-                                >
-                                    <polygon
-                                        points={polygon
-                                            .map((p) => {
-                                                const x =
-                                                    ((p[1] - mapBounds.minLng) / (mapBounds.maxLng - mapBounds.minLng)) * 100;
-                                                const y =
-                                                    ((mapBounds.maxLat - p[0]) / (mapBounds.maxLat - mapBounds.minLat)) * 100;
-                                                return `${x},${y}`;
-                                            })
-                                            .join(" ")}
-                                        fill="none"
-                                        stroke="#6B7B3F"
-                                        strokeWidth="0.5"
-                                        strokeDasharray="2,1.5"
-                                    />
-                                </svg>
                             )}
-                            <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
-                                <div className="w-4 h-0.5 border-t-2 border-dashed border-[#6B7B3F]" />
-                                <span>{t("fieldDetail.fieldBoundary", "Field boundary")}</span>
-                            </div>
-                        </>
-                    ) : (
-                        <div className="absolute inset-0 flex items-center justify-center text-slate-500 text-sm px-4 text-center">
-                            {t("fieldDetail.selectDateToView", "Select a date to view map")}
                         </div>
+                    </div>
+
+                    {/* Historical Benchmark */}
+                    {benchmarkLoading ? (
+                        <div className="card rounded-2xl p-5 h-64 flex flex-col items-center justify-center gap-3 animate-pulse">
+                            <div className="w-16 h-16 bg-slate-200 rounded-lg" />
+                            <div className="h-4 w-48 bg-slate-200 rounded" />
+                            <span className="text-sm text-slate-400">Comparing with historical data...</span>
+                        </div>
+                    ) : benchmarkDataState && (
+                        <HistoricalBenchmark data={benchmarkDataState} />
                     )}
-                </div>
-            </section>
 
-            {/* Terrain (optional) */}
-            {terrainData && (
-                <div className="bg-white rounded-2xl border border-slate-200/80 p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                        <Mountain className="w-5 h-5 text-[#6B7B3F]" strokeWidth={2.5} />
-                        <h3 className="font-semibold text-slate-900">{t("fieldDetail.terrain", "Terrain")}</h3>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 text-center text-sm">
-                        <div className="p-2 rounded-lg bg-slate-50 border border-slate-200">
-                            <div className="text-slate-500 text-xs">Elevation</div>
-                            <div className="font-semibold text-slate-800">
-                                {terrainData.elevation.min}m – {terrainData.elevation.max}m
+                    {/* Terrain & SAR Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+                        {/* Terrain Card */}
+                        {terrainData ? (
+                            <div className="card rounded-2xl p-4 sm:p-5 border-l-4 border-l-purple-500">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center shrink-0">
+                                        <Mountain className="w-5 h-5 text-purple-600" strokeWidth={2.5} />
+                                    </div>
+                                    <h3 className="font-bold text-slate-900">Terrain Analysis</h3>
+                                </div>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-slate-600">Elevation</span>
+                                        <span className="font-semibold text-slate-900">{terrainData.elevation.min}m – {terrainData.elevation.max}m</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-slate-600">Slope</span>
+                                        <span className="font-semibold text-slate-900">{terrainData.slope.mean}°</span>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-2 pt-2">
+                                        {(['waterlogging', 'runoff', 'erosion'] as const).map((risk) => {
+                                            const level = terrainData.risks[risk];
+                                            const riskStyle = level === 'high'
+                                                ? 'bg-red-50 text-red-700 border-red-200'
+                                                : level === 'medium'
+                                                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                                    : 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                                            return (
+                                                <div key={risk} className={`text-center p-2 rounded-lg border text-xs font-semibold ${riskStyle}`}>
+                                                    <div className="text-[10px] uppercase tracking-wide opacity-70 mb-0.5">{risk.slice(0, 7)}</div>
+                                                    <div className="capitalize">{level}</div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    {terrainData.recommendations[0] && (
+                                        <div className="mt-3 p-3 bg-purple-50 rounded-xl text-xs text-slate-700 font-medium border border-purple-100 flex items-start gap-2">
+                                            <Lightbulb className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" strokeWidth={2.5} />
+                                            <span>{terrainData.recommendations[0]}</span>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                        <div className="p-2 rounded-lg bg-slate-50 border border-slate-200">
-                            <div className="text-slate-500 text-xs">Slope</div>
-                            <div className="font-semibold text-slate-800">{terrainData.slope.mean}°</div>
-                        </div>
-                        <div className="p-2 rounded-lg bg-slate-50 border border-slate-200">
-                            <div className="text-slate-500 text-xs">Waterlog</div>
-                            <div className="font-semibold text-slate-800 capitalize">{terrainData.risks.waterlogging}</div>
-                        </div>
-                    </div>
-                    {terrainData.recommendations?.[0] && (
-                        <div className="mt-3 p-3 bg-[#6B7B3F]/10 rounded-xl flex items-start gap-2">
-                            <Lightbulb className="w-4 h-4 text-[#6B7B3F] mt-0.5 shrink-0" strokeWidth={2.5} />
-                            <span className="text-sm text-slate-700">{terrainData.recommendations[0]}</span>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* SAR / Soil moisture (optional) */}
-            {sarData && (
-                <div className="bg-white rounded-2xl border border-slate-200/80 p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                        <Waves className="w-5 h-5 text-[#6B7B3F]" strokeWidth={2.5} />
-                        <h3 className="font-semibold text-slate-900">{t("fieldDetail.radarMonitoring", "Soil moisture (radar)")}</h3>
-                    </div>
-                    <p className="text-sm text-slate-700">{sarData.message}</p>
-                </div>
-            )}
-
-            {/* Crop health over time – scrollable graph, farmer-friendly */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-5">
-                <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
-                    <h3 className="font-semibold text-slate-900">{t("fieldDetail.ndviTrends", "Crop health over time")}</h3>
-                    <AnalyzeButton fieldId={fieldId} className="shrink-0 min-h-[44px]" />
-                </div>
-                <p className="text-sm text-slate-600 mb-4">
-                    {t("fieldDetail.chartHelperText", "This shows how your crop health has changed over time.")}
-                </p>
-                {chartData.length > 0 ? (
-                    <>
-                        <div className="overflow-x-auto overflow-y-hidden -mx-1 px-1 touch-pan-x scroll-smooth" style={{ minHeight: CHART_HEIGHT + 48 }}>
-                            <div style={{ minWidth: CHART_MIN_WIDTH }}>
-                                <NDVIChart
-                                    data={chartData}
-                                    width={CHART_MIN_WIDTH}
-                                    height={CHART_HEIGHT}
-                                    lineLabel={t("fieldDetail.chartLineLabel", "Crop health")}
-                                    dangerLabel={t("fieldDetail.chartDangerLabel", "Danger level")}
-                                    thresholdLabel={t("fieldDetail.minimumSafeLevel", "Minimum Safe Level")}
-                                />
+                        ) : terrainLoading ? (
+                            <div className="card rounded-2xl p-5">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <Mountain className="w-5 h-5 text-purple-600" strokeWidth={2.5} />
+                                    <h3 className="font-bold text-slate-900">Terrain</h3>
+                                </div>
+                                <div className="flex items-center justify-center py-8">
+                                    <div className="w-8 h-8 border-3 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                                </div>
                             </div>
-                        </div>
-                    </>
-                ) : (
-                    <div className="py-12 flex items-center justify-center text-slate-500 text-sm text-center px-4">
-                        {t("fieldDetail.noDataRunAnalysis", "No data yet. Run analysis to see trends.")}
+                        ) : terrainError ? (
+                            <div className="card rounded-2xl p-5 border-l-4 border-l-red-500">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <Mountain className="w-5 h-5 text-purple-600" strokeWidth={2.5} />
+                                    <h3 className="font-bold text-slate-900">Terrain</h3>
+                                </div>
+                                <div className="p-3 bg-red-50 rounded-xl text-sm text-red-700 flex items-start gap-2">
+                                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" strokeWidth={2.5} />
+                                    <span>{terrainError}</span>
+                                </div>
+                            </div>
+                        ) : null}
+
+                        {/* SAR Moisture Card */}
+                        {sarData && (
+                            <div className="card rounded-2xl p-4 sm:p-5 border-l-4 border-l-cyan-500">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="w-10 h-10 rounded-xl bg-cyan-50 flex items-center justify-center shrink-0">
+                                        <Waves className="w-5 h-5 text-cyan-600" strokeWidth={2.5} />
+                                    </div>
+                                    <h3 className="font-bold text-slate-900">Soil Moisture (Radar)</h3>
+                                </div>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-slate-600 text-sm">Status</span>
+                                        <span className={`font-bold px-3 py-1.5 rounded-lg text-sm border ${
+                                            sarData.moistureLevel === 'wet'
+                                                ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                                : sarData.moistureLevel === 'dry'
+                                                    ? 'bg-red-50 text-red-700 border-red-200'
+                                                    : 'bg-amber-50 text-amber-700 border-amber-200'
+                                        }`}>
+                                            {sarData.moistureLevel.toUpperCase()}
+                                        </span>
+                                    </div>
+                                    <p className="text-sm text-slate-700 p-3 bg-cyan-50 rounded-xl border border-cyan-100">
+                                        {sarData.message}
+                                    </p>
+                                    {sarData.advantages.length > 0 && (
+                                        <ul className="space-y-1.5 pt-1">
+                                            {sarData.advantages.map((adv, i) => (
+                                                <li key={i} className="text-sm text-slate-600 flex items-start gap-2">
+                                                    <span className="w-1.5 h-1.5 bg-cyan-500 rounded-full mt-2 shrink-0" />
+                                                    <span>{adv}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
-                )}
+
+                    {/* NDVI Chart */}
+                    <div className="card rounded-2xl p-4 sm:p-5">
+                        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                            <h3 className="font-bold text-slate-900 text-base sm:text-lg">
+                                {t("fieldDetail.ndviTrends", "NDVI Trends")}
+                            </h3>
+                            <AnalyzeButton fieldId={fieldId} />
+                        </div>
+                        <div className="h-56 sm:h-64">
+                            {chartData.length > 0 ? (
+                                <NDVIChart data={chartData} />
+                            ) : (
+                                <div className="h-full flex items-center justify-center text-slate-400">
+                                    <div className="text-center">
+                                        <p className="font-medium mb-1">No data available</p>
+                                        <p className="text-sm">Run analysis to see trends</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                </main>
             </div>
         </div>
     );

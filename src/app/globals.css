@@ -1,27 +1,27 @@
 @import "tailwindcss";
 
 @theme {
-  /* Modern agricultural palette */
-  --color-primary: #10b981;        /* Fresh emerald green */
-  --color-primary-light: #d1fae5;  /* Light mint */
-  --color-primary-dark: #059669;   /* Rich emerald */
+  /* FarmScan – warm agricultural palette */
+  --color-primary: #5a6b2d;        /* Olive green */
+  --color-primary-light: #e8edd8;  /* Soft sage */
+  --color-primary-dark: #4a5a24;   /* Deep olive */
   
-  --color-secondary: #f59e0b;      /* Warm amber */
-  --color-secondary-light: #fef3c7; /* Light amber */
+  --color-secondary: #c17f3a;      /* Terracotta */
+  --color-secondary-light: #fdf0e6; /* Warm cream */
   
-  --color-success: #10b981;        /* Success green */
-  --color-warning: #f59e0b;        /* Warning amber */
-  --color-danger: #ef4444;         /* Danger red */
-  --color-info: #3b82f6;           /* Info blue */
+  --color-success: #2d6a4f;        /* Forest green */
+  --color-warning: #b8860b;        /* Golden */
+  --color-danger: #c53030;         /* Warm red */
+  --color-info: #2563eb;           /* Clear blue */
   
-  --color-background: #ffffff;     /* Pure white */
-  --color-surface: #fafafa;        /* Off-white */
-  --color-text-primary: #0f172a;   /* Slate 900 */
-  --color-text-secondary: #475569; /* Slate 600 */
-  --color-text-muted: #94a3b8;     /* Slate 400 */
+  --color-background: #f8f6f1;     /* Warm off-white */
+  --color-surface: #ffffff;
+  --color-text-primary: #1c1917;   /* Stone 900 */
+  --color-text-secondary: #57534e;  /* Stone 600 */
+  --color-text-muted: #a8a29e;     /* Stone 400 */
   
-  --color-border: #e2e8f0;         /* Slate 200 */
-  --color-border-strong: #cbd5e1;  /* Slate 300 */
+  --color-border: #e7e5e4;         /* Stone 200 */
+  --color-border-strong: #d6d3d1;   /* Stone 300 */
 
   --font-inter: var(--font-inter), ui-sans-serif, system-ui;
   --font-devanagari: var(--font-devanagari), sans-serif;
@@ -43,14 +43,15 @@
 
   body {
     @apply font-sans;
-    background-color: #F5F3EE;
+    background: linear-gradient(180deg, #faf8f4 0%, #f0ebe3 50%, #ebe6de 100%);
+    min-height: 100vh;
     color: var(--color-text-primary);
     font-size: 15px;
     line-height: 1.5;
     font-weight: 400;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    -webkit-tap-highlight-color: rgba(107, 123, 63, 0.1);
+    -webkit-tap-highlight-color: rgba(90, 107, 45, 0.12);
   }
 
   /* Font family utilities */
@@ -100,99 +101,106 @@
     min-height: 44px;
   }
 
-  /* Focus states for accessibility - high contrast */
+  /* Focus states for accessibility */
   button:focus-visible,
   a:focus-visible {
-    @apply outline-none ring-4 ring-offset-2;
-    ring-color: var(--color-primary);
+    @apply outline-none ring-2 ring-offset-2;
+    ring-color: #6b7b3f;
   }
 }
 
 @layer components {
-  /* Primary button - Bold, high-contrast for outdoor use */
+  /* Primary button – olive, depth, clear tap */
   .btn-primary {
-    @apply px-6 py-3 text-white font-bold rounded-xl transition-all min-h-[52px] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed;
-    background-color: var(--color-primary);
-    border: 2px solid var(--color-primary-dark);
+    @apply px-6 py-3 text-white font-bold rounded-2xl transition-all min-h-[52px] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed;
+    background: linear-gradient(180deg, #6b7b3f 0%, #5a6b2d 100%);
+    border: 1px solid rgba(0,0,0,0.08);
     font-size: 16px;
     font-weight: 700;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 12px rgba(90, 107, 45, 0.35), 0 1px 2px rgba(0,0,0,0.06);
   }
   
   .btn-primary:hover:not(:disabled) {
-    background-color: var(--color-primary-dark);
+    background: linear-gradient(180deg, #5a6b2d 0%, #4a5a24 100%);
+    box-shadow: 0 6px 16px rgba(90, 107, 45, 0.4);
   }
   
   .btn-primary:active:not(:disabled) {
     transform: scale(0.98);
-    box-shadow: none;
+    box-shadow: 0 2px 8px rgba(90, 107, 45, 0.3);
   }
 
-  /* Secondary button - Earth tone for less critical actions */
+  /* Secondary button – terracotta/warm */
   .btn-secondary {
-    @apply px-6 py-3 text-white font-bold rounded-xl transition-all min-h-[52px] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed;
-    background-color: var(--color-secondary);
-    border: 2px solid #78350f;
+    @apply px-6 py-3 text-white font-bold rounded-2xl transition-all min-h-[52px] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed;
+    background: linear-gradient(180deg, #d4935c 0%, #c17f3a 100%);
+    border: 1px solid rgba(0,0,0,0.08);
     font-size: 16px;
     font-weight: 700;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 12px rgba(193, 127, 58, 0.3), 0 1px 2px rgba(0,0,0,0.06);
   }
   
   .btn-secondary:hover:not(:disabled) {
-    background-color: #78350f;
+    background: linear-gradient(180deg, #c17f3a 0%, #a66b2d 100%);
+    box-shadow: 0 6px 16px rgba(193, 127, 58, 0.35);
   }
   
   .btn-secondary:active:not(:disabled) {
     transform: scale(0.98);
-    box-shadow: none;
+    box-shadow: 0 2px 8px rgba(193, 127, 58, 0.25);
   }
 
-  /* Outline button - Clean alternative action */
+  /* Outline button – primary border, soft fill on hover */
   .btn-outline {
-    @apply px-6 py-3 font-bold rounded-xl transition-all min-h-[52px] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed;
-    background-color: white;
-    border: 2px solid var(--color-primary);
-    color: var(--color-primary-dark);
+    @apply px-6 py-3 font-bold rounded-2xl transition-all min-h-[52px] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed;
+    background-color: #fff;
+    border: 2px solid #6b7b3f;
+    color: #5a6b2d;
     font-size: 16px;
     font-weight: 700;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
   }
   
   .btn-outline:hover:not(:disabled) {
     background-color: var(--color-primary-light);
+    box-shadow: 0 2px 8px rgba(90, 107, 45, 0.15);
   }
   
   .btn-outline:active:not(:disabled) {
     transform: scale(0.98);
   }
 
-  /* Card component - Clean, minimal, high contrast */
+  /* Card – soft shadow, warm border */
   .card {
-    @apply bg-white rounded-2xl transition-colors;
-    border: 2px solid var(--color-border);
-    box-shadow: var(--shadow-sm);
+    @apply rounded-2xl transition-all;
+    background: linear-gradient(180deg, #ffffff 0%, #fefdfb 100%);
+    border: 1px solid rgba(214, 211, 209, 0.8);
+    box-shadow: 0 2px 8px rgba(28, 25, 23, 0.06), 0 1px 2px rgba(28, 25, 23, 0.04);
   }
 
   .card-lg {
-    @apply bg-white rounded-2xl transition-colors;
-    border: 2px solid var(--color-border);
-    box-shadow: var(--shadow-md);
+    @apply rounded-2xl transition-all;
+    background: linear-gradient(180deg, #ffffff 0%, #fefdfb 100%);
+    border: 1px solid rgba(214, 211, 209, 0.8);
+    box-shadow: 0 4px 16px rgba(28, 25, 23, 0.08), 0 2px 4px rgba(28, 25, 23, 0.04);
   }
   
   .card-interactive {
-    @apply bg-white rounded-2xl transition-all cursor-pointer;
-    border: 2px solid var(--color-border);
-    box-shadow: var(--shadow-sm);
+    @apply rounded-2xl transition-all cursor-pointer;
+    background: linear-gradient(180deg, #ffffff 0%, #fefdfb 100%);
+    border: 1px solid rgba(214, 211, 209, 0.8);
+    box-shadow: 0 2px 8px rgba(28, 25, 23, 0.06), 0 1px 2px rgba(28, 25, 23, 0.04);
   }
   
   .card-interactive:hover {
-    border-color: var(--color-border-strong);
-    box-shadow: var(--shadow-md);
-    transform: translateY(-1px);
+    border-color: rgba(90, 107, 45, 0.25);
+    box-shadow: 0 8px 24px rgba(28, 25, 23, 0.1), 0 2px 6px rgba(90, 107, 45, 0.08);
+    transform: translateY(-2px);
   }
   
   .card-interactive:active {
     transform: translateY(0);
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 2px 8px rgba(28, 25, 23, 0.06);
   }
 
   /* Badge component - High contrast, larger text */
@@ -337,4 +345,13 @@ input, textarea, select {
   .no-print {
     @apply hidden;
   }
+}
+
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }

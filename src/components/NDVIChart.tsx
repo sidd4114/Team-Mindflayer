@@ -57,7 +57,7 @@ export default function NDVIChart({
                 tickCount={6}
             />
             <Tooltip
-                formatter={(value: number) => [value.toFixed(2), lineLabel]}
+                formatter={(value: number | undefined) => [(value ?? 0).toFixed(2), lineLabel]}
                 labelFormatter={(label) => new Date(label).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
             />
             <ReferenceLine

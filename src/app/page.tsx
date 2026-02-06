@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Sun, Droplets, Wind, Camera, Satellite, AlertTriangle, Volume2, Leaf, Sparkles, MapPin, ChevronRight, Search, Cloud, Eye, Gauge, SlidersHorizontal, Loader2, CloudRain, CloudSnow, CloudFog } from "lucide-react";
+import { Sun, Droplets, Wind, Camera, Satellite, AlertTriangle, Volume2, Leaf, Sparkles, MapPin, ChevronRight, Cloud, Eye, Gauge, Loader2, CloudRain, CloudSnow, CloudFog } from "lucide-react";
 import { useState, useEffect } from "react";
 import { DiseaseScanner } from "@/components/DiseaseScanner";
 import { useI18n } from "@/contexts/I18nContext";
@@ -274,18 +274,7 @@ export default function Home() {
             <LanguageSwitcher />
           </div>
 
-          {/* Enhanced Search Bar */}
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-white/70" strokeWidth={2.5} />
-            <input
-              type="text"
-              placeholder="Search here..."
-              className="w-full bg-white/15 backdrop-blur-md border border-white/25 rounded-[18px] pl-12 pr-12 py-3.5 text-white placeholder:text-white/50 text-[15px] font-medium focus:outline-none focus:bg-white/20 focus:border-white/40 transition-all"
-            />
-            <button className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center hover:bg-white/30 transition-all">
-              <SlidersHorizontal className="w-4 h-4 text-white" strokeWidth={2.5} />
-            </button>
-          </div>
+
         </div>
       </header>
 

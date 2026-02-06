@@ -1,10 +1,15 @@
 import type { Metadata } from "next";
-import { Inter, Noto_Sans_Devanagari } from "next/font/google";
+// import { Inter, Noto_Sans_Devanagari } from "next/font/google";
 import "./globals.css";
 import { I18nProvider } from "@/contexts/I18nContext";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 
+// Fallback for offline build
+const inter = { variable: "font-sans-fallback" };
+const devanagari = { variable: "font-devanagari-fallback" };
+
+/*
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
@@ -15,6 +20,7 @@ const devanagari = Noto_Sans_Devanagari({
   subsets: ["devanagari"],
   weight: ["400", "500", "600", "700"],
 });
+*/
 
 export const metadata: Metadata = {
   title: "FarmScan - Precision Agriculture AI",

@@ -30,7 +30,7 @@ export default async function FieldDetailPage({ params }: { params: Promise<{ fi
         .order("date", { ascending: true });
 
     // Calculate VCI data -> DEFERRED to client
-    const vciData = null;
+    const vciData = undefined;
 
     // Fetch Management Zones
     const { data: managementZones } = await supabase
@@ -43,10 +43,10 @@ export default async function FieldDetailPage({ params }: { params: Promise<{ fi
     // Auto-generation logic removed for performance (can be triggered by client)
 
     // Historical Benchmark -> DEFERRED to client
-    const benchmarkData = null;
+    const benchmarkData = undefined;
 
     // Calculate statistical anomalies (simple version)
-    let statisticalData = null;
+    let statisticalData = undefined;
     if (readings && readings.length >= 10) { // Reduced requirement for demo purposes
         try {
             const ndviValues = readings
@@ -118,11 +118,6 @@ export default async function FieldDetailPage({ params }: { params: Promise<{ fi
 
     return (
         <div className="container mx-auto p-4">
-            <div className="mb-6">
-                <h1 className="text-3xl font-bold">{field.name}</h1>
-                <p className="text-gray-600">Crop: {field.crop_type} | Planted: {field.planting_date || 'Not set'}</p>
-            </div>
-
             <FieldDashboard
                 fieldId={field.id}
                 fieldInfo={fieldInfo}
