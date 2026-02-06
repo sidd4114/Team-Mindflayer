@@ -46,7 +46,7 @@ export async function GET(request: Request) {
       source: customUrl ? "custom_feed" : "data.gov.in",
     }));
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("market_prices")
       .upsert(toInsert, { onConflict: "region,crop_type,date" });
 

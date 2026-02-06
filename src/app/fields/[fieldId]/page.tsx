@@ -70,13 +70,10 @@ export default async function FieldDetailPage({ params }: { params: Promise<{ fi
                         ? `Abnormal vegetation pattern detected (${Math.abs(deviation).toFixed(1)}σ ${deviation > 0 ? 'above' : 'below'} avg)` 
                         : "Vegetation development is tracking within normal usage patterns"
                 };
-                console.log("✅ Statistical data calculated:", statisticalData);
             }
         } catch (e) {
-            console.error("❌ Statistics calculation error:", e);
+            console.error("Statistics calculation error:", e);
         }
-    } else {
-        console.log("⚠️ Not enough readings for statistical analysis (need 30+, have " + (readings?.length || 0) + ")");
     }
 
     // Group alerts by message and keep only the latest for each unique message

@@ -165,7 +165,7 @@ export async function GET(
         });
 
         let mapUrl: string | undefined;
-        let moistureLevel: "dry" | "moderate" | "wet" = "moderate";
+        const moistureLevel: "dry" | "moderate" | "wet" = "moderate";
         let confidence: "high" | "medium" | "low" = "medium";
 
         if (response.ok) {

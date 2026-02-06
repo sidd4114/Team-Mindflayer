@@ -1,0 +1,26 @@
+{
+  "treatment": {
+    "earlyblight": "Early Blight • Common fungal disease caused by fungus. Appears as dark spots on older leaves. Apply copper-based fungicides. Remove infected fruits. Improve air circulation.",
+    "powderymildew": "Powdery Mildew • White fungal coating on leaves and stems. Apply copper-based fungicides. Remove infected leaves. Ensure proper spacing for airflow.",
+    "lateblight": "Late Blight • Serious fungal disease causing rapid crop failure. Apply systemic fungicides immediately. Remove all infected plants. Destroy crop residues.",
+    "leafspot": "Leaf Spot • Various fungal diseases affecting leaf tissue. Apply fungicides. Remove lower infected leaves. Mulch around plants.",
+    "leafmold": "Leaf Mold • Fungal disease causing yellow spots on upper leaf surfaces. Improve ventilation. Apply fungicides. Remove infected leaves.",
+    "anthracnose": "Anthracnose • Fungal disease causing dark, sunken lesions. Apply copper-based fungicides. Remove infected fruits. Improve air circulation.",
+    "bacterialspot": "Bacterial Spot • Bacterial infection causing dark spots. Use copper-based bactericides. Remove infected plants. Practice crop rotation.",
+    "commonrust": "Common Rust • Fungal disease with small brown pustules on corn leaves. Apply fungicides containing azoxystrobin or propiconazole. Remove severely infected lower leaves. Improve air circulation. Avoid overhead irrigation.",
+    "northernleafblight": "Northern Leaf Blight • Fungal disease causing long gray-green to tan lesions on corn. Apply foliar fungicides (e.g. chlorothalonil, pyraclostrobin). Remove crop residue after harvest. Rotate with non-host crops. Plant resistant hybrids.",
+    "healthy": "Healthy • No treatment needed. Continue regular care and monitoring."
+  },
+  "prevention": {
+    "earlyblight": "Early Blight Prevention • Rotate crops annually to reduce spore buildup. Space plants properly for good air circulation. Avoid overhead watering. Remove lower leaves as plants grow. Use disease-resistant varieties. Scout regularly for early signs.",
+    "powderymildew": "Powdery Mildew Prevention • Maintain proper plant spacing for ventilation. Avoid excessive nitrogen fertilizer. Monitor humidity levels. Use resistant varieties. Apply preventive sulfur spray. Keep plants healthy and stress-free.",
+    "lateblight": "Late Blight Prevention • Use certified disease-free seed potatoes. Plant resistant varieties. Practice long crop rotation (3-4 years). Avoid overhead irrigation. Destroy volunteer plants. Monitor weather conditions closely.",
+    "leafspot": "Leaf Spot Prevention • Improve air circulation between plants. Avoid wetting foliage when watering. Use drip irrigation instead of overhead. Remove lower leaves from plants. Rotate crops yearly. Clean pruning tools between cuts.",
+    "leafmold": "Leaf Mold Prevention • Ensure adequate greenhouse ventilation. Reduce humidity below 85%. Use disease-resistant varieties. Space plants properly. Water at soil level. Remove lower infected leaves promptly.",
+    "anthracnose": "Anthracnose Prevention • Use certified disease-free seeds and plants. Practice crop rotation with different crop families. Avoid overhead watering and working in wet foliage. Remove infected fruit immediately. Mulch to prevent soil splash.",
+    "bacterialspot": "Bacterial Spot Prevention • Use disease-free seeds and transplants. Practice crop rotation for 2-3 years. Avoid working in fields when plants are wet. Space plants for good air circulation. Remove infected material immediately.",
+    "commonrust": "Common Rust Prevention • Plant resistant hybrids. Rotate corn with soybeans or other non-host crops. Remove and destroy crop residue after harvest. Avoid late planting. Scout for pustules from mid-season.",
+    "northernleafblight": "Northern Leaf Blight Prevention • Use resistant hybrids. Bury or destroy corn residue after harvest. Rotate with non-host crops (e.g. soybean) for 1–2 years. Avoid planting in low, wet areas.",
+    "healthy": "Healthy Crop Prevention • Continue monitoring your field regularly. Maintain proper irrigation and drainage. Ensure balanced fertilization. Scout for early pest and disease signs. Practice good farm hygiene."
+  }
+}

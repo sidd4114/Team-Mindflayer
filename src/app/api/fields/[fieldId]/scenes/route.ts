@@ -1,8 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { searchScenes } from "@/lib/sentinel/catalog";
 import { NextResponse } from "next/server";
-import { z } from "zod";
-
 export async function GET(
     request: Request,
     { params }: { params: Promise<{ fieldId: string }> } // params is now a Promise in Next.js 15/16? Actually in Next 15 yes. The user said Next.js 14+, but the package.json showed 16. I should treat it as awaitable.

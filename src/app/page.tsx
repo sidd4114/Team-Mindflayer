@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { getTreatmentAdvice, getPreventionAdvice } from "@/lib/advice-service";
 
-interface ScanResult {
+export interface ScanResult {
   disease: string;
   confidence: number;
   treatment: string;
@@ -55,14 +55,8 @@ export default function Home() {
   useEffect(() => {
     setIsOnline(navigator.onLine);
 
-    const handleOnline = () => {
-      setIsOnline(true);
-      console.log('Status: Online');
-    };
-    const handleOffline = () => {
-      setIsOnline(false);
-      console.log('Status: Offline');
-    };
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -207,19 +201,13 @@ export default function Home() {
     const fetchAdvice = async () => {
       try {
         const translatedDiseaseName = getTranslatedDiseaseName(scanResult.disease);
-        console.log('Fetching advice for disease:', translatedDiseaseName, 'in language:', locale);
         const treatment = await getTreatmentAdvice(scanResult, locale, translatedDiseaseName);
         const prevention = await getPreventionAdvice(scanResult, locale, translatedDiseaseName);
-        
-        console.log('Successfully fetched advice');
         setTreatmentAdvice(treatment);
         setPreventionAdvice(prevention);
       } catch (error) {
         console.error('Failed to fetch advice:', error);
-        const errorMsg = error instanceof Error ? error.message : 'Failed to fetch advice';
-        console.log('Using offline fallback due to:', errorMsg);
-        
-        // Show error in UI and fallback to translation strings
+        // Fallback to translation strings
         setTreatmentAdvice(
           scanResult.treatment === 'healthy'
             ? t('results.healthyMsg')
@@ -274,7 +262,7 @@ export default function Home() {
     const normalized = diseaseName
       .toLowerCase()
       .replace(/\s+/g, '')
-      .replace('bellpepper', 'bellpepper')
+      .replace('corn', 'corn')
       .replace('potato', 'potato')
       .replace('tomato', 'tomato');
 
@@ -333,7 +321,6 @@ export default function Home() {
         const API_KEY = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY;
 
         if (!API_KEY || API_KEY === 'demo') {
-          console.info('ℹ️ OpenWeatherMap API key not configured. Using demo weather data.');
           setDemoWeatherData();
           return;
         }
@@ -365,9 +352,6 @@ export default function Home() {
           const errorData = await response.json().catch(() => ({}));
 
           if (response.status === 401) {
-            console.error('❌ OpenWeatherMap API: 401 Unauthorized');
-            console.error('→ Your API key might not be activated yet (takes 10-15 min)');
-            console.error('→ Or the API key is invalid. Check: https://home.openweathermap.org/api_keys');
             throw new Error('API key unauthorized - check if activated');
           }
 
@@ -394,8 +378,6 @@ export default function Home() {
         setWeatherLoading(false);
       } catch (error) {
         console.error('Weather fetch error:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Failed to fetch weather';
-        console.info('ℹ️ Using demo weather data due to error:', errorMessage);
         setDemoWeatherData();
         setWeatherLoading(false);
       }

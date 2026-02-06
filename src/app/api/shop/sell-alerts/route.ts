@@ -3,8 +3,6 @@ import { NextResponse } from "next/server";
 import {
   getPriceTrend,
   buildSellAlerts,
-  weekOverWeekChange,
-  averagePrice,
   DEFAULT_REGION,
 } from "@/lib/market-intelligence";
 

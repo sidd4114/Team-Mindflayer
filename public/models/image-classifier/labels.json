@@ -1,1 +1,13 @@
-["bellpepper_anthracnose", "bellpepper_bacterial_spot", "bellpepper_healthy", "potato_early_blight", "potato_healthy", "potato_late_blight", "tomato_bacterial_spot", "tomato_early_blight", "tomato_healthy", "tomato_late_blight", "tomato_leaf_mold"]
+[
+  "corn_common_rust",
+  "corn_healthy",
+  "corn_northern_leaf_blight",
+  "potato_early_blight",
+  "potato_healthy",
+  "potato_late_blight",
+  "tomato_bacterial_spot",
+  "tomato_early_blight",
+  "tomato_healthy",
+  "tomato_late_blight",
+  "tomato_leaf_mold"
+]

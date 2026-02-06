@@ -29,40 +29,24 @@ class ServiceWorkerManager {
     }
 
     try {
-      console.log('[SW Manager] Registering service worker...');
-      
-      // Register the service worker
       this.registration = await navigator.serviceWorker.register('/sw.js', {
         scope: '/',
       });
 
-      console.log('[SW Manager] Service worker registered:', this.registration.scope);
-
-      // Handle updates
       this.registration.addEventListener('updatefound', () => {
         const newWorker = this.registration?.installing;
-        console.log('[SW Manager] New service worker found');
-
         newWorker?.addEventListener('statechange', () => {
           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            // New service worker available
-            console.log('[SW Manager] New service worker available');
             this.notifyUpdate();
           }
         });
       });
 
-      // Check for updates periodically (every hour)
       this.updateCheckInterval = window.setInterval(() => {
         this.checkForUpdates();
       }, 60 * 60 * 1000);
 
-      // Listen for controller change (when new SW takes over)
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        console.log('[SW Manager] Service worker controller changed');
-        // Optionally reload the page
-        // window.location.reload();
-      });
+      navigator.serviceWorker.addEventListener('controllerchange', () => {});
 
       return {
         isSupported: true,
@@ -91,7 +75,6 @@ class ServiceWorkerManager {
 
     try {
       await this.registration.update();
-      console.log('[SW Manager] Checked for updates');
     } catch (error) {
       console.error('[SW Manager] Update check failed:', error);
     }
@@ -140,7 +123,6 @@ class ServiceWorkerManager {
 
     try {
       const success = await this.registration.unregister();
-      console.log('[SW Manager] Service worker unregistered');
       
       if (this.updateCheckInterval) {
         clearInterval(this.updateCheckInterval);
@@ -208,6 +190,46 @@ class ServiceWorkerManager {
   }
 
   /**
+   * Clear model cache and re-download fresh models
+   * Call this when the app starts to ensure latest model is used
+   */
+  async clearModelCache(): Promise<boolean> {
+    if (!this.registration?.active) {
+      console.warn('[SW Manager] No active service worker');
+      // If no SW, try to clear caches directly
+      if ('caches' in window) {
+        try {
+          const cacheNames = await caches.keys();
+          const modelCaches = cacheNames.filter(name => name.includes('models') || name.includes('farmscan'));
+          await Promise.all(modelCaches.map(name => caches.delete(name)));
+          return true;
+        } catch (error) {
+          console.error('[SW Manager] Direct cache clear failed:', error);
+          return false;
+        }
+      }
+      return false;
+    }
+
+    return new Promise((resolve) => {
+      const messageChannel = new MessageChannel();
+      
+      messageChannel.port1.onmessage = (event) => {
+        resolve(event.data.success || false);
+      };
+
+      if (this.registration?.active) {
+        this.registration.active.postMessage(
+          { type: 'CLEAR_MODEL_CACHE' },
+          [messageChannel.port2]
+        );
+      } else {
+        resolve(false);
+      }
+    });
+  }
+
+  /**
    * Get registration status
    */
   getStatus(): ServiceWorkerStatus {
@@ -233,3 +255,4 @@ export const unregisterServiceWorker = () => swManager.unregister();
 export const cacheModelFiles = () => swManager.cacheModelFiles();
 export const getCacheStatus = () => swManager.getCacheStatus();
 export const getServiceWorkerStatus = () => swManager.getStatus();
+export const clearModelCache = () => swManager.clearModelCache();

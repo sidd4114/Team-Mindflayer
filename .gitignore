@@ -64,3 +64,6 @@ build_log.txt
 
 # Optional archives
 *.zip
+
+# Lint / tool output
+lint_output.txt

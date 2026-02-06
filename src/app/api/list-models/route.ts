@@ -8,7 +8,6 @@ export async function GET() {
       return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
     }
 
-    console.log('Listing available Gemini models...');
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
@@ -25,7 +24,7 @@ export async function GET() {
     
     try {
       data = JSON.parse(responseText);
-    } catch (e) {
+    } catch {
       console.error('Failed to parse models response:', responseText);
       return NextResponse.json(
         { error: 'Failed to parse models response', details: responseText },
@@ -67,7 +66,7 @@ export async function GET() {
         return aIndex - bIndex;
       });
 
-    console.log('Available models:', availableModels.map(m => m.name));
+    // console.log('Available models:', availableModels.map((m: any) => m.name));
 
     return NextResponse.json({
       success: true,

@@ -60,8 +60,7 @@ export async function GET(
         // Derive terrain characteristics from coordinates
         // This is a placeholder - real implementation would use Copernicus DEM
         const centerLat = (minLat + maxLat) / 2;
-        const centerLng = (minLng + maxLng) / 2;
-        
+
         // Simulate elevation based on location (real DEM would be better)
         const baseElevation = 200 + Math.abs(centerLat) * 10;
         const elevationVariation = Math.random() * 15 + 5;

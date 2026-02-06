@@ -9,10 +9,7 @@ async function getAvailableModels(apiKey: string): Promise<string[]> {
   const now = Date.now();
   
   // Return cached models if still fresh
-  if (cachedModels && (now - cacheTime) < CACHE_DURATION) {
-    console.log('Using cached model list');
-    return cachedModels;
-  }
+  if (cachedModels && (now - cacheTime) < CACHE_DURATION) return cachedModels;
 
   try {
     const response = await fetch(
@@ -39,7 +36,6 @@ async function getAvailableModels(apiKey: string): Promise<string[]> {
 
     cachedModels = models;
     cacheTime = now;
-    console.log('Fetched available models:', models);
     return models;
   } catch (error) {
     console.warn('Error fetching available models:', error);
@@ -47,19 +43,27 @@ async function getAvailableModels(apiKey: string): Promise<string[]> {
   }
 }
 
+// Prefer NEXT_PUBLIC_ for client/server parity; fallback to server-only GEMINI_API_KEY
+function getGeminiApiKey(): string | undefined {
+  return (
+    process.env.NEXT_PUBLIC_GEMINI_API_KEY?.trim() ||
+    process.env.GEMINI_API_KEY?.trim() ||
+    undefined
+  );
+}
+
 export async function POST(request: NextRequest) {
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) {
+    console.error('Gemini API key not configured (check NEXT_PUBLIC_GEMINI_API_KEY or GEMINI_API_KEY in .env.local)');
+    return NextResponse.json(
+      { error: 'Gemini API key not configured' },
+      { status: 500 }
+    );
+  }
+
   try {
     const { type, diseaseName, language } = await request.json();
-
-    const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-    
-    if (!apiKey) {
-      console.error('Gemini API key not configured');
-      return NextResponse.json(
-        { error: 'Gemini API key not configured' },
-        { status: 500 }
-      );
-    }
 
     const languageMap: Record<string, string> = {
       en: 'English',
@@ -118,12 +122,7 @@ Use simple language. No asterisks for formatting. Be practical and specific.`;
       ],
     };
 
-    console.log('Calling Gemini API for:', { type, diseaseName, language: lang });
-
-    // Get available models dynamically
     const availableModels = await getAvailableModels(apiKey);
-    console.log('Available models to try:', availableModels);
-    
     let lastError: any = null;
     
     for (const model of availableModels) {
@@ -155,7 +154,7 @@ Use simple language. No asterisks for formatting. Be practical and specific.`;
         let data;
         try {
           data = JSON.parse(responseText);
-        } catch (parseError) {
+        } catch {
           console.error('Failed to parse Gemini response:', responseText);
           return NextResponse.json(
             { error: 'Invalid response from Gemini API', details: responseText },
@@ -177,7 +176,6 @@ Use simple language. No asterisks for formatting. Be practical and specific.`;
           continue; // Try next model
         }
 
-        console.log('Gemini API Success:', { type, diseaseName, model, adviceLength: advice.length });
         return NextResponse.json({ advice, model });
       } catch (error) {
         lastError = { model, error: String(error) };

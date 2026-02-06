@@ -7,9 +7,9 @@ import * as tf from '@tensorflow/tfjs';
 
 // Disease labels mapping
 const DISEASE_LABELS = [
-  'bellpepper_anthracnose',
-  'bellpepper_bacterial_spot',
-  'bellpepper_healthy',
+  'corn_common_rust',
+  'corn_healthy',
+  'corn_northern_leaf_blight',
   'potato_early_blight',
   'potato_healthy',
   'potato_late_blight',
@@ -27,23 +27,23 @@ const DISEASE_INFO: Record<string, {
   treatmentKey: string;
   description: string;
 }> = {
-  bellpepper_anthracnose: {
-    displayName: 'Bell Pepper Anthracnose',
-    severity: 'high',
-    treatmentKey: 'anthracnose',
-    description: 'Fungal disease causing dark, sunken lesions on peppers.',
+  corn_common_rust: {
+    displayName: 'Corn Common Rust',
+    severity: 'medium',
+    treatmentKey: 'commonrust',
+    description: 'Fungal disease causing small, circular to elongate brown pustules on leaves.',
   },
-  bellpepper_bacterial_spot: {
-    displayName: 'Bell Pepper Bacterial Spot',
-    severity: 'high',
-    treatmentKey: 'bacterialspot',
-    description: 'Bacterial infection causing dark spots on leaves and fruits.',
-  },
-  bellpepper_healthy: {
-    displayName: 'Healthy Bell Pepper',
+  corn_healthy: {
+    displayName: 'Healthy Corn',
     severity: 'low',
     treatmentKey: 'healthy',
     description: 'Plant shows no signs of disease. Maintain good practices.',
+  },
+  corn_northern_leaf_blight: {
+    displayName: 'Corn Northern Leaf Blight',
+    severity: 'high',
+    treatmentKey: 'northernleafblight',
+    description: 'Fungal disease causing long, gray-green to tan lesions on leaves.',
   },
   potato_early_blight: {
     displayName: 'Potato Early Blight',
@@ -121,13 +121,11 @@ class OfflineClassifier {
       // Try WebGL first for better performance
       await tf.setBackend('webgl');
       await tf.ready();
-      console.log('✅ TensorFlow.js WebGL backend initialized');
     } catch (error) {
       console.warn('⚠️ WebGL backend failed, falling back to CPU:', error);
       try {
         await tf.setBackend('cpu');
         await tf.ready();
-        console.log('✅ TensorFlow.js CPU backend initialized');
       } catch (cpuError) {
         throw new Error('Failed to initialize TensorFlow.js: ' + (cpuError instanceof Error ? cpuError.message : String(cpuError)));
       }
@@ -151,8 +149,6 @@ class OfflineClassifier {
     // Start loading
     this.modelLoading = (async () => {
       try {
-        console.log('🔄 Loading plant disease classification model...');
-
         // Initialize backend first
         if (!this.isInitialized) {
           await this.initializeBackend();
@@ -161,15 +157,7 @@ class OfflineClassifier {
 
         // Load model from public directory as a GraphModel
         const modelPath = '/models/image-classifier/model.json';
-        console.log('📡 Loading TF.js GraphModel from:', modelPath);
         const model = await tf.loadGraphModel(modelPath);
-
-        console.log('✅ GraphModel loaded successfully');
-        if (model.inputs?.length && model.outputs?.length) {
-          console.log('📊 Model input:', model.inputs[0].name, model.inputs[0].shape);
-          console.log('📊 Model output:', model.outputs[0].name, model.outputs[0].shape);
-        }
-
         this.model = model;
         return model;
       } catch (error) {
@@ -200,18 +188,24 @@ class OfflineClassifier {
   }
 
   /**
-   * Preprocess image for model input (GraphModel expects float images)
+   * Preprocess image for model input (MobileNetV2 expects [-1, 1] range)
+   * This matches tf.keras.applications.mobilenet_v2.preprocess_input()
    */
   private preprocessImage(imageElement: HTMLImageElement | HTMLVideoElement): tf.Tensor4D {
     return tf.tidy(() => {
       // Convert image to tensor
       const tensor = tf.browser.fromPixels(imageElement);
 
-      // Resize to 224x224
+      // Resize to 224x224 (MobileNetV2 input size)
       const resized = tf.image.resizeBilinear(tensor, [224, 224]);
 
-      // Normalize to [0, 1]
-      const normalized = tf.div(resized, 255);
+      // Cast to float32 for proper division
+      const floatTensor = tf.cast(resized, 'float32');
+
+      // MobileNetV2 preprocessing: scale to [-1, 1] range
+      // This is equivalent to tf.keras.applications.mobilenet_v2.preprocess_input()
+      // Formula: (pixel / 127.5) - 1
+      const normalized = tf.sub(tf.div(floatTensor, 127.5), 1);
 
       // Add batch dimension
       const batched = normalized.expandDims(0) as tf.Tensor4D;
@@ -241,8 +235,6 @@ class OfflineClassifier {
       // Preprocess image
       const preprocessed = this.preprocessImage(imageElement);
 
-      // Run inference using GraphModel
-      console.log('🔍 Running inference...');
       const graphModel = model;
 
       const inputName = graphModel.inputs[0].name;
@@ -275,9 +267,6 @@ class OfflineClassifier {
       if (!diseaseInfo) {
         throw new Error(`Unknown disease key: ${diseaseKey}`);
       }
-
-      console.log('✅ Classification complete:', topPrediction);
-      console.log('📊 Top 3 predictions:', allPredictions.slice(0, 3));
 
       return {
         disease: diseaseKey,

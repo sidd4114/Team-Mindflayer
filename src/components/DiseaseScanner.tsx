@@ -78,11 +78,6 @@ export function DiseaseScanner({ onResult, onClose }: DiseaseScannerProps) {
       // Run classification
       const result: ClassificationResult = await offlineClassifier.classifyFromWebcam(video);
 
-      console.log('Classification result:', result);
-      console.log('Top 3 predictions:', result.allPredictions.slice(0, 3).map(p => 
-        `${p.label}: ${p.confidence.toFixed(1)}%`
-      ).join(', '));
-      
       // Show progress with detected disease
       setScanProgress(`Detected: ${result.displayName}`);
 
@@ -132,11 +127,6 @@ export function DiseaseScanner({ onResult, onClose }: DiseaseScannerProps) {
         const result: ClassificationResult = await offlineClassifier.classifyImage(
           dataUrl
         );
-
-        console.log('Classification result:', result);
-        console.log('Top 3 predictions:', result.allPredictions.slice(0, 3).map(p => 
-          `${p.label}: ${p.confidence.toFixed(1)}%`
-        ).join(', '));
 
         setScanProgress(
           `Detected: ${result.displayName}`
@@ -359,19 +349,19 @@ export function DiseaseScanner({ onResult, onClose }: DiseaseScannerProps) {
                   </ul>
                 </div>
 
-                {/* Bell Pepper Section */}
+                {/* Corn Section */}
                 <div className="bg-green-50 rounded-xl p-3 border-2 border-green-200">
                   <div className="font-bold text-stone-900 text-sm mb-1.5 flex items-center gap-1.5">
-                    <span>🫑</span> Bell Pepper
+                    <span>🌽</span> Corn
                   </div>
                   <ul className="space-y-1">
                     <li className="text-xs text-stone-700 flex items-start gap-1.5">
                       <span className="text-green-600 mt-0.5">✓</span>
-                      <span>Anthracnose</span>
+                      <span>Common Rust</span>
                     </li>
                     <li className="text-xs text-stone-700 flex items-start gap-1.5">
                       <span className="text-green-600 mt-0.5">✓</span>
-                      <span>Bacterial Spot</span>
+                      <span>Northern Leaf Blight</span>
                     </li>
                     <li className="text-xs text-stone-700 flex items-start gap-1.5">
                       <span className="text-green-600 mt-0.5">✓</span>

@@ -8,7 +8,6 @@ export async function GET() {
       return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
     }
 
-    console.log('Testing Gemini API - Step 1: Listing available models...');
 
     // Step 1: List available models
     const listResponse = await fetch(
@@ -42,7 +41,7 @@ export async function GET() {
         };
       });
 
-    console.log('Available models:', availableModels.map(m => m.name));
+    // console.log('Available models:', availableModels.map((m: any) => m.name));
 
     if (availableModels.length === 0) {
       return NextResponse.json({
@@ -58,7 +57,6 @@ export async function GET() {
 
     // Step 2: Test the first available model
     const firstModel = availableModels[0];
-    console.log(`Testing Gemini API - Step 2: Testing model ${firstModel.name}...`);
 
     const testPrompt = "Say 'API is working' briefly.";
     
@@ -97,7 +95,7 @@ export async function GET() {
         error: `Model ${firstModel.name} test failed`,
         status: testResponse.status,
         details: testResponseText,
-        availableModels: availableModels.map(m => m.name),
+        availableModels: availableModels.map((m: any) => m.name),
         suggestion: 'Try another model or check your API quota'
       }, { status: testResponse.status });
     }
@@ -105,7 +103,6 @@ export async function GET() {
     const testData = JSON.parse(testResponseText);
     const testAdvice = testData.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-    console.log(`✓ Gemini API is working! Model: ${firstModel.name}`);
     return NextResponse.json({
       success: true,
       message: `Gemini API is working!`,
@@ -113,7 +110,7 @@ export async function GET() {
       displayName: firstModel.displayName,
       testedAt: new Date().toISOString(),
       response: testAdvice,
-      availableModels: availableModels.map(m => m.name)
+      availableModels: availableModels.map((m: any) => m.name)
     });
   } catch (error) {
     console.error('Test error:', error);

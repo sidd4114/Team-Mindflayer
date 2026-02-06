@@ -12,23 +12,32 @@ interface AdviceData {
 
 let adviceData: AdviceData | null = null;
 
-// Load advice data from JSON file
+// Cache-bust so updated advice (e.g. corn diseases) is loaded; bump when advice-data.json changes
+const ADVICE_DATA_VERSION = 2;
+
+const EMPTY_ADVICE: AdviceData = { treatments: {}, prevention: {} };
+
 async function loadAdviceData(): Promise<AdviceData> {
   if (adviceData) return adviceData;
-  
+
   try {
-    const response = await fetch('/advice-data.json');
-    adviceData = await response.json();
-    return adviceData;
-  } catch (error) {
-    console.error('Failed to load advice data:', error);
-    // Return empty structure if fetch fails
-    return { treatments: {}, prevention: {} };
+    const response = await fetch(`/advice-data.json?v=${ADVICE_DATA_VERSION}`, {
+      cache: 'no-store',
+    });
+    if (!response.ok) return EMPTY_ADVICE;
+    const data = (await response.json()) as AdviceData;
+    if (data?.treatments && data?.prevention) {
+      adviceData = data;
+      return data;
+    }
+  } catch {
+    // Offline or network error: avoid surfacing "Failed to fetch" to the user
   }
+  return EMPTY_ADVICE;
 }
 
 /**
- * Get treatment advice - uses Gemini if online, JSON fallback if offline
+ * Get treatment advice - uses offline JSON when offline, Gemini when online (with JSON fallback on failure)
  */
 export async function getTreatmentAdvice(
   scanResult: ScanResult | null,
@@ -40,25 +49,26 @@ export async function getTreatmentAdvice(
     return 'Your crop appears healthy. Continue regular monitoring and maintenance.';
   }
 
-  // Map locale to language code
   const langMap: Record<string, string> = { en: 'en', hi: 'hi', mr: 'mr' };
   const lang = langMap[locale] || 'en';
 
-  // Check if online
-  if (navigator.onLine) {
-    try {
-      return await getGeminiAdvice('treatment', diseaseName, lang);
-    } catch (error) {
-      console.warn('Gemini API failed, falling back to offline data:', error);
-      return await getOfflineAdvice('treatment', scanResult.treatment, lang);
-    }
-  } else {
+  // Offline: use only JSON (no Gemini request)
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
     return await getOfflineAdvice('treatment', scanResult.treatment, lang);
   }
+
+  // Online: try Gemini, then fall back to JSON on failure
+  try {
+    const geminiAdvice = await getGeminiAdvice('treatment', diseaseName, lang);
+    if (geminiAdvice !== null) return geminiAdvice;
+  } catch (error) {
+    console.warn('Gemini API failed, falling back to offline data:', error);
+  }
+  return await getOfflineAdvice('treatment', scanResult.treatment, lang);
 }
 
 /**
- * Get prevention advice - uses Gemini if online, JSON fallback if offline
+ * Get prevention advice - uses offline JSON when offline, Gemini when online (with JSON fallback on failure)
  */
 export async function getPreventionAdvice(
   scanResult: ScanResult | null,
@@ -70,61 +80,102 @@ export async function getPreventionAdvice(
     return 'Maintain regular monitoring and good farm practices to keep your crop healthy.';
   }
 
-  // Map locale to language code
   const langMap: Record<string, string> = { en: 'en', hi: 'hi', mr: 'mr' };
   const lang = langMap[locale] || 'en';
 
-  // Check if online
-  if (navigator.onLine) {
-    try {
-      return await getGeminiAdvice('prevention', diseaseName, lang);
-    } catch (error) {
-      console.warn('Gemini API failed, falling back to offline data:', error);
-      return await getOfflineAdvice('prevention', scanResult.treatment, lang);
-    }
-  } else {
+  // Offline: use only JSON (no Gemini request)
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
     return await getOfflineAdvice('prevention', scanResult.treatment, lang);
   }
+
+  // Online: try Gemini, then fall back to JSON on failure
+  try {
+    const geminiAdvice = await getGeminiAdvice('prevention', diseaseName, lang);
+    if (geminiAdvice !== null) return geminiAdvice;
+  } catch (error) {
+    console.warn('Gemini API failed, falling back to offline data:', error);
+  }
+  return await getOfflineAdvice('prevention', scanResult.treatment, lang);
 }
 
+/** Locale message file shape: treatment and prevention are Record<key, string> per language */
+const localeAdviceCache: Record<string, { treatment: Record<string, string>; prevention: Record<string, string> } | null> = {};
+
+/** When offline: fetch advice from locale-specific message file (en.json, hi.json, mr.json) */
+async function loadLocaleAdvice(lang: string): Promise<{ treatment: Record<string, string>; prevention: Record<string, string> } | null> {
+  if (localeAdviceCache[lang] !== undefined) return localeAdviceCache[lang];
+  try {
+    const response = await fetch(`/messages/${lang}.json`, { cache: 'no-store' });
+    if (!response.ok) return null;
+    const data = (await response.json()) as { treatment?: Record<string, string>; prevention?: Record<string, string> };
+    if (data.treatment && data.prevention) {
+      localeAdviceCache[lang] = { treatment: data.treatment, prevention: data.prevention };
+      return localeAdviceCache[lang];
+    }
+  } catch {
+    // ignore
+  }
+  localeAdviceCache[lang] = null;
+  return null;
+}
+
+const FALLBACK_TREATMENT = 'Treatment advice not available. Please consult with a local agricultural expert.';
+const FALLBACK_PREVENTION = 'Prevention tips not available. Maintain good farm practices and regular monitoring.';
+
 /**
- * Get offline advice from JSON file
+ * Get offline advice: prefer locale message file (en.json, hi.json, mr.json), fallback to advice-data.json
  */
 async function getOfflineAdvice(
   type: 'treatment' | 'prevention',
   diseaseKey: string,
   lang: string
 ): Promise<string> {
-  const data = await loadAdviceData();
-  const typeData = type === 'treatment' ? data.treatments : data.prevention;
-  
-  // Try to get the specific disease advice
-  if (typeData[diseaseKey] && typeData[diseaseKey][lang]) {
-    return typeData[diseaseKey][lang];
-  }
+  try {
+    const key = (diseaseKey || '').toLowerCase().trim();
+    if (!key) {
+      return type === 'treatment' ? FALLBACK_TREATMENT : FALLBACK_PREVENTION;
+    }
 
-  // Fallback to English if specific language not available
-  if (typeData[diseaseKey] && typeData[diseaseKey]['en']) {
-    return typeData[diseaseKey]['en'];
-  }
+    // Prefer locale-specific message file (en.json, hi.json, mr.json)
+    try {
+      const localeData = await loadLocaleAdvice(lang);
+      if (localeData) {
+        const typeData = type === 'treatment' ? localeData.treatment : localeData.prevention;
+        const text = typeData?.[key];
+        if (text) return text;
+      }
+    } catch {
+      // ignore
+    }
 
-  // Final fallback message
-  return type === 'treatment'
-    ? 'Treatment advice not available. Please consult with a local agricultural expert.'
-    : 'Prevention tips not available. Maintain good farm practices and regular monitoring.';
+    // Fallback: advice-data.json (multi-lang)
+    const data = await loadAdviceData();
+    const typeData = type === 'treatment' ? data.treatments : data.prevention;
+    const entry = typeData?.[key];
+    if (entry) {
+      if (entry[lang]) return entry[lang];
+      if (entry['en']) return entry['en'];
+    }
+
+    return type === 'treatment' ? FALLBACK_TREATMENT : FALLBACK_PREVENTION;
+  } catch {
+    return type === 'treatment' ? FALLBACK_TREATMENT : FALLBACK_PREVENTION;
+  }
 }
 
 /**
  * Get advice from Gemini API via server route
  */
+/** Returns advice string, or null if Gemini is unavailable (e.g. offline or key not configured) so caller can use offline advice. */
 async function getGeminiAdvice(
   type: 'treatment' | 'prevention',
   diseaseName: string,
   lang: string
-): Promise<string> {
+): Promise<string | null> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return null; // Never call API when offline
+  }
   try {
-    console.log('Calling advice API route:', { type, diseaseName, lang });
-
     const response = await fetch('/api/advice', {
       method: 'POST',
       headers: {
@@ -137,22 +188,27 @@ async function getGeminiAdvice(
       }),
     });
 
-    let data;
+    const responseText = await response.text();
+    let data: { error?: string; details?: string; advice?: string } = {};
     try {
-      data = await response.json();
-    } catch (parseError) {
-      console.error('Failed to parse advice API response:', parseError);
-      throw new Error('Invalid response from advice API');
+      if (responseText) data = JSON.parse(responseText);
+    } catch {
+      data = {};
     }
 
     if (!response.ok) {
-      const errorMessage = data?.error || `HTTP ${response.status}`;
-      const details = data?.details || '';
-      console.error('Advice API Error:', {
-        status: response.status,
-        error: errorMessage,
-        details: details
-      });
+      const errorMessage = data?.error || response.statusText || `HTTP ${response.status}`;
+      const details = data?.details || (responseText && responseText.length < 200 ? responseText : '');
+      const isKeyNotConfigured = errorMessage.includes('Gemini API key not configured');
+      if (isKeyNotConfigured) {
+        return null; // Silent fallback to offline advice
+      }
+      console.error(
+        'Advice API Error:',
+        `status=${response.status}`,
+        `error=${errorMessage}`,
+        details ? `details=${details}` : ''
+      );
       throw new Error(`Advice API error: ${errorMessage}${details ? ` - ${details}` : ''}`);
     }
 
@@ -161,7 +217,6 @@ async function getGeminiAdvice(
       throw new Error('No advice returned from API');
     }
 
-    console.log('Advice API Success:', { type, diseaseName, adviceLength: data.advice.length });
     return data.advice;
   } catch (error) {
     console.error('Advice API call failed:', error);

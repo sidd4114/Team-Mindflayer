@@ -35,6 +35,16 @@
       "hi": "बैक्टीरियल स्पॉट • गहरे धब्बे का कारण बनने वाला जीवाणु संक्रमण। कॉपर-आधारित जीवाणुनाशक का उपयोग करें। संक्रमित पौधों को हटाएं। फसल चक्र का अभ्यास करें।",
       "mr": "बॅक्टेरियल स्पॉट • गडद डाग निर्माण करणारा जीवाणू संक्रमण। तांबे-आधारित जीवाणूनाशक वापरा। संक्रमित रोपे काढून टाका। पिक रोटेशन अभ्यास करा।"
     },
+    "commonrust": {
+      "en": "Common Rust • Fungal disease with small brown pustules on corn leaves. Apply fungicides containing azoxystrobin or propiconazole. Remove severely infected lower leaves. Improve air circulation. Avoid overhead irrigation.",
+      "hi": "कॉमन रस्ट • मक्के की पत्तियों पर छोटे भूरे फफोले वाला कवक रोग। एज़ोक्सिस्ट्रोबिन या प्रोपिकोनाज़ोल युक्त कवकनाशक लागू करें। गंभीर रूप से संक्रमित निचली पत्तियों को हटाएं। वायु परिसंचरण सुधारें।",
+      "mr": "कॉमन रस्ट • मक्याच्या पानांवर लहान तपकिरी पस्ट्यूल्स असलेला बुरशी रोग। अझॉक्सिस्ट्रोबिन किंवा प्रोपिकोनाझोल युक्त बुरशीनाशक लागू करा। गंभीर संक्रमित खालची पाने काढून टाका। हवा संचार सुधारा।"
+    },
+    "northernleafblight": {
+      "en": "Northern Leaf Blight • Fungal disease causing long gray-green to tan lesions on corn. Apply foliar fungicides (e.g. chlorothalonil, pyraclostrobin). Remove crop residue after harvest. Rotate with non-host crops. Plant resistant hybrids.",
+      "hi": "नॉर्दर्न लीफ ब्लाइट • मक्के पर लंबे ग्रे-हरे से तन घाव वाला कवक रोग। पत्ती कवकनाशक (जैसे क्लोरोथैलोनिल) लागू करें। कटाई के बाद अवशेष हटाएं। गैर-धारक फसलों के साथ चक्रण करें। प्रतिरोधी संकर लगाएं।",
+      "mr": "नॉर्दर्न लीफ ब्लाइट • मक्यावर लांब ग्रे-हिरवे ते तपकिरी घाव निर्माण करणारा बुरशी रोग। पर्ण बुरशीनाशक (उदा. क्लोरोथॅलोनिल) लागू करा। कापणीनंतर अवशेष काढून टाका। प्रतिरोधक संकर लागवड करा।"
+    },
     "healthy": {
       "en": "Healthy • No treatment needed. Continue regular care and monitoring.",
       "hi": "स्वस्थ • कोई उपचार आवश्यक नहीं। नियमित देखभाल और निगरानी जारी रखें।",
@@ -76,6 +86,16 @@
       "en": "Bacterial Spot Prevention • Use disease-free seeds and transplants. Practice crop rotation for 2-3 years. Avoid working in fields when plants are wet. Space plants for good air circulation. Remove infected material immediately.",
       "hi": "बैक्टीरियल स्पॉट की रोकथाम • रोग-मुक्त बीज का उपयोग करें। 2-3 साल का फसल चक्र अपनाएं। गीले समय में खेत में न जाएं। पौधों के बीच अच्छी हवा रखें। संक्रमित सामग्री तुरंत हटाएं।",
       "mr": "बॅक्टेरियल स्पॉट प्रतिबंध • रोग-मुक्त बिया वापरा। 2-3 वर्षांचे पिक चक्र अवलंबा। ओल्या वेळी शेतात जाऊ नका। रोपांमध्ये चांगली हवा राखा। संक्रमित सामग्री तात्काळ काढून टाका।"
+    },
+    "commonrust": {
+      "en": "Common Rust Prevention • Plant resistant hybrids. Rotate corn with soybeans or other non-host crops. Remove and destroy crop residue after harvest. Avoid late planting. Scout for pustules from mid-season.",
+      "hi": "कॉमन रस्ट की रोकथाम • प्रतिरोधी संकर लगाएं। मक्के का सोयाबीन या अन्य गैर-धारक फसलों के साथ चक्रण करें। कटाई के बाद अवशेष हटाएं और नष्ट करें। देर से बुवाई से बचें। मध्य-मौसम से फफोले की जांच करें।",
+      "mr": "कॉमन रस्ट प्रतिबंध • प्रतिरोधक संकर लागवड करा। मका आणि सोयाबीन किंवा इतर पिकांची फिरवणी करा। कापणीनंतर अवशेष काढून नष्ट करा। उशीरा लागवड टाळा। मध्य-हंगामापासून पस्ट्यूल्स तपासा।"
+    },
+    "northernleafblight": {
+      "en": "Northern Leaf Blight Prevention • Use resistant hybrids. Bury or destroy corn residue after harvest. Rotate with non-host crops (e.g. soybean) for 1–2 years. Avoid planting in low, wet areas.",
+      "hi": "नॉर्दर्न लीफ ब्लाइट की रोकथाम • प्रतिरोधी संकर उपयोग करें। कटाई के बाद मक्का अवशेष दबाएं या नष्ट करें। 1-2 साल गैर-धारक फसल (जैसे सोयाबीन) के साथ चक्रण करें। निचले, गीले क्षेत्रों में बुवाई न करें।",
+      "mr": "नॉर्दर्न लीफ ब्लाइट प्रतिबंध • प्रतिरोधक संकर वापरा। कापणीनंतर मका अवशेष पुरा किंवा नष्ट करा। 1-2 वर्षे गैर-धारक पिक सोबत फिरवणी करा। ओल्या निम्न भागात लागवड टाळा।"
     },
     "healthy": {
       "en": "Healthy Crop Prevention • Continue monitoring your field regularly. Maintain proper irrigation and drainage. Ensure balanced fertilization. Scout for early pest and disease signs. Practice good farm hygiene.",
